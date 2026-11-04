@@ -117,10 +117,18 @@ def main():
     webview.start(func=smoke_check if smoke else None, args=(win, result) if smoke else None,
                   localization=RU, private_mode=False, debug="--debug" in sys.argv,
                   storage_path=str(config.app_dir() / "webview"))
-    srv.shutdown()
+    code = 0
     if smoke:
         print("SMOKE " + ("PASSED" if result.get("ok") else "FAILED"), flush=True)
-        sys.exit(0 if result.get("ok") else 1)
+        code = 0 if result.get("ok") else 1
+    # The window is gone: leave now. A normal interpreter shutdown waits for every non-daemon
+    # thread (pywebview keeps some), and the app would linger without a window.
+    try:
+        srv.shutdown()
+    finally:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(code)
 
 
 def smoke_check(win, result: dict) -> None:
