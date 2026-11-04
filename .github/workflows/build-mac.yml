@@ -1,0 +1,45 @@
+# Builds Retake.app for Apple Silicon, runs its self-test and publishes the .dmg.
+#   - manual run (Actions → Build macOS app → Run workflow): the .dmg is attached to the run
+#   - a tag like v0.1.0-beta.1: also a GitHub pre-release with the .dmg (the link for testers)
+# Not on every push: macOS minutes count 10x against the free quota of private repositories.
+name: Build macOS app
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-15   # Apple Silicon (macOS 14 runners were retired in November 2026)
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Build, self-test, package
+        env:
+          PYTHON: python
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: packaging/build_mac.sh
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Retake-macOS
+          path: dist/*.dmg
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Pre-release for testers
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*.dmg
+          prerelease: true
+          body_path: BETA.md

@@ -1,0 +1,24 @@
+# secrets
+.env
+*.env
+
+# local environments, models, build output
+.venv/
+build/
+dist/
+packaging/bin/
+models/
+__pycache__/
+*.pyc
+
+# lesson recordings and everything made from them
+work/
+*.mp4
+*.mov
+*.m4v
+*.mkv
+*.fcpxml
+*.review.html
+*.edits.json
+*.part
+.DS_Store

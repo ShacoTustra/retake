@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка дублей</title>
+<!--RETAKE-->
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6e6e73; --line: #e2e0db;
+  --retake: #d93b3b; --aside: #b0406f; --stutter: #e8871e; --filler: #c9a200; --pause: #5b7fbf; --manual: #8a4fd1;
+  --accent: #1f6feb; --cutbg: rgba(217,59,59,.10); --ok:#1a7f37; --warn:#b35900; --track:#ebe9e4; --llm:#6b4fd1;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#151517; --panel:#1f1f22; --ink:#ececf0; --muted:#9a9aa2; --line:#33333a; --cutbg: rgba(255,90,90,.14);
+    --accent:#4c8dff; --ok:#3fb950; --warn:#e3a34a; --track:#2a2a30; --llm:#a08bff; --aside:#e0709c; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif; }
+header { display:flex; gap:12px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
+header h1 { font-size:15px; margin:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:30vw; }
+header a.back { color:var(--accent); text-decoration:none; white-space:nowrap; }
+.stats { color:var(--muted); font-variant-numeric: tabular-nums; }
+.stats b { color:var(--ink); }
+header .sp { flex:1; }
+button { font:inherit; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:7px; padding:5px 10px; cursor:pointer; }
+button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+button.on { background:var(--ink); color:var(--panel); }
+button.link { border:none; background:none; color:var(--accent); padding:0; }
+button:disabled { opacity:.5; cursor:default; }
+#job { display:none; align-items:center; gap:10px; padding:6px 16px; background:var(--panel); border-bottom:1px solid var(--line); font-size:13px; }
+#job.show { display:flex; }
+#job .bar { width:220px; height:6px; border-radius:3px; background:var(--track); overflow:hidden; position:relative; }
+#job .bar i { position:absolute; inset:0 auto 0 0; background:var(--accent); transition:width .4s; }
+#job .bar.indet i { width:30% !important; animation:slide 1.3s infinite ease-in-out; }
+@keyframes slide { from { left:-30%; } to { left:100%; } }
+#job.err { color:var(--retake); } #job.ok { color:var(--ok); }
+main { display:grid; grid-template-columns: minmax(420px, 1.1fr) 1fr; gap:0; height: calc(100vh - 53px); }
+body.hasjob main { height: calc(100vh - 87px); }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; height:auto !important; } header h1 { max-width:60vw; } }
+#left { display:flex; flex-direction:column; border-right:1px solid var(--line); min-height:0; }
+video { width:100%; background:#000; max-height:46vh; }
+#bar { position:relative; height:34px; margin:8px 12px 4px; background:var(--panel); border:1px solid var(--line); border-radius:6px; cursor:pointer; overflow:hidden; flex:none; }
+#bar .m { position:absolute; top:4px; bottom:4px; min-width:2px; border-radius:2px; opacity:.85; }
+#bar .m.off { opacity:.25; }
+#bar #head { position:absolute; top:0; bottom:0; width:2px; background:var(--ink); z-index:2; }
+.controls { display:flex; gap:6px; padding:4px 12px 8px; flex-wrap:wrap; align-items:center; }
+.controls .hint { color:var(--muted); font-size:12px; margin-left:auto; }
+.filters { display:flex; gap:6px; padding:0 12px 6px; flex-wrap:wrap; }
+.chip { display:inline-flex; gap:6px; align-items:center; border:1px solid var(--line); border-radius:99px; padding:2px 10px; font-size:12px; cursor:pointer; user-select:none; background:var(--panel); }
+.chip i { width:9px; height:9px; border-radius:50%; display:inline-block; }
+.chip.hidden { opacity:.4; }
+.chip.focus { border-color:var(--llm); color:var(--llm); }
+.chip.focus.active { background:var(--llm); color:#fff; }
+#llmInfo { padding:0 12px 6px; font-size:12px; color:var(--muted); }
+#llmInfo .err { color:var(--retake); }
+#list { overflow:auto; flex:1; padding:0 12px 24px; }
+.ed { display:grid; grid-template-columns: 22px 1fr; gap:8px; padding:8px 10px; margin:6px 0; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--c); border-radius:8px; cursor:pointer; }
+.ed.cur { outline:2px solid var(--accent); }
+.ed.off .rm { text-decoration:none; opacity:.6; }
+.ed input { margin-top:3px; width:16px; height:16px; }
+.ed .meta { font-size:12px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; }
+.ed .meta .k { color:var(--c); font-weight:600; }
+.ed .rm { color:var(--retake); text-decoration:line-through; }
+.ed .kp { color:var(--muted); }
+.ed .llm { font-size:12.5px; margin-top:2px; }
+.tag { display:inline-block; font-size:11px; font-weight:600; border-radius:4px; padding:0 5px; line-height:17px; }
+.tag.cut { background:var(--llm); color:#fff; }
+.tag.keep { border:1px solid var(--llm); color:var(--llm); }
+.tag.new { background:var(--llm); color:#fff; }
+.tag.dis { background:var(--warn); color:#fff; }
+.conf { color:var(--muted); }
+#tr { overflow:auto; padding:16px 22px 80px; font-size:15px; line-height:1.9; }
+#tr p { margin:0 0 6px; }
+#tr p .t { color:var(--muted); font-size:11px; margin-right:6px; font-variant-numeric: tabular-nums; cursor:pointer; }
+#tr span.w { cursor:pointer; border-radius:3px; }
+#tr span.w:hover { background: rgba(127,127,127,.15); }
+#tr span.w.cut { text-decoration: line-through; color: var(--retake); background: var(--cutbg); }
+#tr span.w.now { background: var(--accent); color:#fff; text-decoration:none; }
+#tr .gap { display:inline-block; font-size:11px; color:var(--pause); padding:0 4px; border:1px dashed var(--pause); border-radius:4px; margin:0 3px; line-height:1.4; cursor:pointer; }
+#tr .gap.on { text-decoration: line-through; opacity:.6; }
+kbd { font: 11px ui-monospace, monospace; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 4px; }
+.app-only { display:none; } body.app .app-only { display:inline-block; } body.app .file-only { display:none; }
+#loading { padding:40px; text-align:center; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <a class="back app-only" href="/">← Уроки</a>
+  <h1 id="title">Проверка дублей</h1>
+  <span class="stats" id="stats"></span>
+  <span class="sp"></span>
+  <button id="btnLLM" class="app-only" title="Попросить языковую модель проверить находки и поискать пропущенное">Проверить с LLM</button>
+  <button id="btnReset" title="Вернуть исходные предложения и удалить ручные вырезки">Сбросить</button>
+  <button id="btnExport" class="primary file-only">Сохранить решения (JSON)</button>
+  <button id="btnReport" class="app-only" title="Собрать журнал, найденные правки и ваши решения по этому уроку в zip-файл для разработчика">Сообщить о проблеме</button>
+  <button id="btnXML" class="app-only" title="Таймлайн для Final Cut Pro / DaVinci Resolve">FCPXML</button>
+  <button id="btnRender" class="primary app-only" title="Собрать ролик без вырезанных мест">Собрать видео</button>
+</header>
+<div id="job"><span id="jobText"></span><div class="bar" id="jobBar"><i></i></div><button id="jobBtn" class="link"></button></div>
+<div id="loading">Загрузка…</div>
+<main style="display:none">
+  <section id="left">
+    <video id="v" controls preload="metadata"></video>
+    <div id="bar"><div id="head"></div></div>
+    <div class="controls">
+      <button id="btnSkip" class="on" title="При воспроизведении перепрыгивать отмеченные вырезки">⏭ Смотреть с вырезками</button>
+      <button id="btnPrev">← пред.</button>
+      <button id="btnNext">след. →</button>
+      <button id="btnIn" title="Начало ручной вырезки (I)">[ I</button>
+      <button id="btnOut" title="Конец ручной вырезки (O)">O ]</button>
+      <span class="hint"><kbd>Space</kbd> пауза · <kbd>J</kbd>/<kbd>K</kbd> пред./след. · <kbd>X</kbd> вкл/выкл · <kbd>Enter</kbd> прослушать стык · <kbd>I</kbd>/<kbd>O</kbd> ручная вырезка</span>
+    </div>
+    <div class="filters" id="filters"></div>
+    <div id="llmInfo"></div>
+    <div id="list"></div>
+  </section>
+  <section id="tr"></section>
+</main>
+<script>
+const EMBED = /*__DATA__*/null;     // standalone file made by make_review.py
+const APP = window.RETAKE || null;  // served by app.py
+const KIND = {
+  retake:  {name:"Дубль",        color:"var(--retake)"},
+  aside:   {name:"Не по уроку",  color:"var(--aside)"},
+  stutter: {name:"Запинка",      color:"var(--stutter)"},
+  filler:  {name:"Мычание",      color:"var(--filler)"},
+  pause:   {name:"Пауза",        color:"var(--pause)"},
+  manual:  {name:"Вручную",      color:"var(--manual)"},
+};
+const CONF = { high: "уверенно", medium: "вероятно", low: "сомневается" };
+const $ = s => document.querySelector(s);
+const v = $("#v");
+const fmt = t => { t = Math.max(0, t); const m = Math.floor(t/60), s = (t%60); return m + ":" + s.toFixed(1).padStart(4,"0"); };
+const fmtLong = t => { const h=Math.floor(t/3600), m=Math.floor(t%3600/60), s=Math.round(t%60); return (h? h+" ч ":"") + m + " мин " + s + " с"; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { "X-Retake-Token": APP.token, "Content-Type": "application/json" },
+    body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+let DATA, T0, T1, LS_KEY, edits = [];
+let hidden = new Set(["pause"]);  // pauses are many and low-risk: shown in the transcript, not the list
+let focusLLM = false;             // list only what the LLM disagreed with or found
+let cur = -1, skipMode = true, markIn = null, stopAt = null;
+
+function load(data, keepView) {
+  DATA = data;
+  [T0, T1] = DATA.range;
+  edits = DATA.edits.map(e => ({...e, default_on: e.default_on ?? e.on}));
+  if (!APP) {
+    LS_KEY = "retake:" + DATA.video + ":" + T0 + ":" + T1;
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+      if (saved) {
+        const st = new Map(saved.states);
+        edits.forEach(e => { if (st.has(e.id)) e.on = st.get(e.id); });
+        (saved.manual || []).forEach(m => edits.push(m));
+      }
+    } catch (_) {}
+  }
+  if (!keepView) { v.src = DATA.video; }
+  const name = APP ? DATA.project.name : (DATA.source || "").split(/[\\/]/).pop();
+  $("#title").textContent = name; document.title = name + " — проверка";
+  $("#loading").style.display = "none"; $("main").style.display = "";
+  renderTranscript(); changed(true); renderLLMInfo();
+}
+
+// ---------------------------------------------------------------- saving decisions
+let saveTimer = null;
+function persist() {
+  if (APP) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      const overrides = {};
+      edits.filter(e => e.kind !== "manual" && e.on !== e.default_on)
+           .forEach(e => overrides[e.id] = { on: e.on, start: e.start, end: e.end });
+      api(`/api/projects/${APP.project}/decisions`, { method: "PUT",
+        body: { overrides, manual: edits.filter(e => e.kind === "manual") } })
+        .catch(err => showJob("Не удалось сохранить решения: " + err.message, "err"));
+    }, 400);
+    return;
+  }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      states: edits.filter(e => e.kind !== "manual").map(e => [e.id, e.on]),
+      manual: edits.filter(e => e.kind === "manual"),
+    }));
+  } catch (_) {}
+}
+
+// merged list of active cut intervals
+function activeCuts() {
+  const iv = edits.filter(e => e.on).map(e => [e.start, e.end]).sort((a,b) => a[0]-b[0]);
+  const out = [];
+  for (const [a,b] of iv) {
+    if (out.length && a <= out[out.length-1][1]) out[out.length-1][1] = Math.max(out[out.length-1][1], b);
+    else out.push([a,b]);
+  }
+  return out;
+}
+
+function renderStats() {
+  const cuts = activeCuts();
+  const cut = cuts.reduce((s,[a,b]) => s + b - a, 0);
+  const total = T1 - T0;
+  const n = edits.filter(e => e.on).length;
+  $("#stats").innerHTML = `исходник <b>${fmtLong(total)}</b> · вырезаем <b>${fmtLong(cut)}</b> (${n} мест) · итог <b>${fmtLong(total - cut)}</b>`;
+}
+
+const isLLMFocus = e => e.llm && (e.disputed || e.src === "llm");
+function renderFilters() {
+  const f = $("#filters"); f.innerHTML = "";
+  const nFocus = edits.filter(isLLMFocus).length;
+  if (nFocus) {
+    const c = document.createElement("span");
+    c.className = "chip focus" + (focusLLM ? " active" : "");
+    c.innerHTML = `LLM: спорные и новые <b>${nFocus}</b>`;
+    c.title = "Показать только места, где модель не согласна с правилами, и её собственные находки";
+    c.onclick = () => { focusLLM = !focusLLM; renderList(); renderFilters(); };
+    f.appendChild(c);
+  }
+  for (const k of Object.keys(KIND)) {
+    const all = edits.filter(e => e.kind === k);
+    if (!all.length) continue;
+    const on = all.filter(e => e.on).length;
+    const c = document.createElement("span");
+    c.className = "chip" + (hidden.has(k) ? " hidden" : "");
+    c.innerHTML = `<i style="background:${KIND[k].color}"></i>${KIND[k].name} <b>${on}/${all.length}</b>`;
+    c.title = "Клик — скрыть/показать в списке. Двойной клик — включить/выключить все этого типа";
+    c.onclick = () => { hidden.has(k) ? hidden.delete(k) : hidden.add(k); renderList(); renderFilters(); };
+    c.ondblclick = () => { const val = on < all.length; all.forEach(e => e.on = val); changed(); };
+    f.appendChild(c);
+  }
+}
+
+function renderLLMInfo() {
+  const box = $("#llmInfo");
+  const L = DATA.llm;
+  let html = "";
+  if (L) {
+    const short = (L.model || "").split("/").pop();
+    html = `Проверено LLM (${esc(short)}, ${esc(L.at || "")}): мнение по ${L.verdicts} местам, новых находок ${L.new}.`;
+  }
+  if (APP && DATA.project.llm_error) html += ` <span class="err">Последний запуск LLM не удался: ${esc(DATA.project.llm_error)}</span>`;
+  box.innerHTML = html;
+  box.style.display = html ? "" : "none";
+  if (APP) {
+    const b = $("#btnLLM");
+    b.disabled = !DATA.llm_ready;
+    b.title = DATA.llm_ready ? `Модель: ${DATA.llm_model}. Ваши решения по правкам сохранятся.` : "Укажите адрес API и модель в настройках на главной странице";
+    b.textContent = L ? "Проверить с LLM ещё раз" : "Проверить с LLM";
+  }
+}
+
+function visibleEdits() {
+  return edits.filter(e => focusLLM ? isLLMFocus(e) : !hidden.has(e.kind)).sort((a,b) => a.start - b.start);
+}
+
+function llmLine(e) {
+  if (!e.llm) return "";
+  const L = e.llm;
+  if (e.src === "llm")
+    return `<div class="llm"><span class="tag new">нашла LLM</span> <span class="conf">${CONF[L.confidence] || ""}</span> ${esc(L.reason)}</div>`;
+  const dis = e.disputed ? ` <span class="tag dis" title="Правило предлагало ${e.rule_on ? "вырезать" : "оставить"}">спорно</span>` : "";
+  return `<div class="llm"><span class="tag ${L.cut ? "cut" : "keep"}">LLM: ${L.cut ? "вырезать" : "оставить"}</span>${dis} <span class="conf">${CONF[L.confidence] || ""}</span> ${esc(L.reason)}</div>`;
+}
+
+function renderList() {
+  const L = $("#list"); L.innerHTML = "";
+  for (const e of visibleEdits()) {
+    const d = document.createElement("div");
+    d.className = "ed" + (e.on ? "" : " off") + (e.id === cur ? " cur" : "");
+    d.style.setProperty("--c", KIND[e.kind].color);
+    d.dataset.id = e.id;
+    const extra = e.why && e.src !== "llm" ? ` · ${esc(e.why)}` : "";
+    d.innerHTML = `<input type="checkbox" ${e.on ? "checked" : ""} title="Вырезать">
+      <div><div class="meta"><span class="k">${KIND[e.kind].name}</span><span>${fmt(e.start)} → ${fmt(e.end)}</span><span>−${(e.end-e.start).toFixed(1)} с${extra}</span></div>
+      ${llmLine(e)}
+      <div class="rm">${esc(e.removed || "")}</div><div class="kp">→ дальше: ${esc(after(e.end))}</div></div>`;
+    d.querySelector("input").onclick = ev => { ev.stopPropagation(); e.on = ev.target.checked; changed(); };
+    d.onclick = () => { select(e.id); preview(e); };
+    L.appendChild(d);
+  }
+  if (!L.children.length) L.innerHTML = `<p style="color:var(--muted)">Нет мест в этом фильтре.</p>`;
+}
+
+function renderBar() {
+  const bar = $("#bar");
+  bar.querySelectorAll(".m").forEach(n => n.remove());
+  const W = T1 - T0;
+  for (const e of edits) {
+    const m = document.createElement("div");
+    m.className = "m" + (e.on ? "" : " off");
+    m.style.left = ((e.start - T0) / W * 100) + "%";
+    m.style.width = ((e.end - e.start) / W * 100) + "%";
+    m.style.background = KIND[e.kind].color;
+    bar.appendChild(m);
+  }
+}
+
+// transcript: paragraphs split on long pauses; words inside active cuts are struck through,
+// pause edits appear inline as clickable chips
+let wordEls = [];
+const gapEls = new Map();
+function renderTranscript() {
+  const tr = $("#tr"); tr.innerHTML = "";
+  gapEls.clear(); wordEls = [];
+  const pauses = edits.filter(e => e.kind === "pause").sort((a, b) => a.start - b.start);
+  let pi = 0, p = null, prevEnd = -1e9;
+  const addGap = (e, parent) => {
+    const g = document.createElement("span");
+    g.className = "gap" + (e.on ? " on" : "");
+    g.textContent = "⏸ " + (e.end - e.start).toFixed(1) + " с";
+    g.title = "Пауза: клик — вырезать/оставить";
+    g.onclick = ev => { ev.stopPropagation(); e.on = !e.on; changed(); };
+    gapEls.set(e.id, g);
+    parent.appendChild(g);
+  };
+  for (const ph of DATA.phrases) {
+    if (!p || ph.start - prevEnd > 2.0) {
+      p = document.createElement("p");
+      const t = document.createElement("span");
+      t.className = "t"; t.textContent = fmt(ph.start);
+      t.onclick = () => seek(ph.start);
+      p.appendChild(t);
+      tr.appendChild(p);
+    }
+    for (let i = ph.w0; i < ph.w1; i++) {
+      const w = DATA.words[i];
+      while (pi < pauses.length && pauses[pi].end <= w.s + 0.01) addGap(pauses[pi++], p);
+      const s = document.createElement("span");
+      s.className = "w"; s.textContent = w.t; s.dataset.i = i;
+      s.onclick = () => seek(w.s);
+      wordEls[i] = s;
+      p.appendChild(s);
+    }
+    prevEnd = ph.end;
+  }
+  while (p && pi < pauses.length) addGap(pauses[pi++], p);
+}
+function markTranscript() {
+  const cuts = activeCuts();
+  let k = 0;
+  DATA.words.forEach((w, i) => {
+    const mid = (w.s + w.e) / 2;
+    while (k < cuts.length && cuts[k][1] < mid) k++;
+    const inCut = k < cuts.length && cuts[k][0] <= mid && mid <= cuts[k][1];
+    wordEls[i] && wordEls[i].classList.toggle("cut", inCut);
+  });
+  for (const e of edits) { const g = gapEls.get(e.id); g && g.classList.toggle("on", e.on); }
+}
+// text that follows a cut, so the reviewer sees what the cut joins onto
+function after(t, n = 9) {
+  let lo = 0, hi = DATA.words.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (DATA.words[m].s < t - 0.01) lo = m + 1; else hi = m; }
+  return DATA.words.slice(lo, lo + n).map(w => w.t).join("").trim() + (lo + n < DATA.words.length ? "…" : "");
+}
+
+function changed(initial) { if (!initial) persist(); renderStats(); renderFilters(); renderList(); renderBar(); markTranscript(); }
+
+function seek(t) { v.currentTime = t; }
+function select(id) {
+  cur = id;
+  document.querySelectorAll(".ed").forEach(n => n.classList.toggle("cur", +n.dataset.id === id));
+  const n = document.querySelector(`.ed[data-id="${id}"]`);
+  n && n.scrollIntoView({block:"nearest"});
+}
+function preview(e) {
+  stopAt = e.end + 3;
+  v.currentTime = Math.max(T0, e.start - 3);
+  v.play();
+}
+function step(dir) {
+  const list = visibleEdits();
+  if (!list.length) return;
+  let i = list.findIndex(e => e.id === cur);
+  i = i < 0 ? (dir > 0 ? 0 : list.length - 1) : Math.min(list.length - 1, Math.max(0, i + dir));
+  select(list[i].id); preview(list[i]);
+}
+
+// playback loop: skip active cuts, highlight current word, stop after preview
+let lastWord = -1;
+function tick() {
+  if (DATA) {
+    const t = v.currentTime;
+    if (!v.paused) {
+      if (skipMode) {
+        for (const [a, b] of activeCuts()) {
+          if (t >= a && t < b - 0.02) { v.currentTime = b; break; }
+        }
+      }
+      if (stopAt !== null && t >= stopAt) { v.pause(); stopAt = null; }
+      if (t >= T1) v.pause();
+    }
+    $("#head").style.left = ((t - T0) / (T1 - T0) * 100) + "%";
+    let lo = 0, hi = DATA.words.length - 1, idx = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (DATA.words[m].s <= t) { idx = m; lo = m + 1; } else hi = m - 1; }
+    if (idx !== lastWord) {
+      if (lastWord >= 0 && wordEls[lastWord]) wordEls[lastWord].classList.remove("now");
+      if (idx >= 0 && wordEls[idx] && t <= DATA.words[idx].e + 0.3) {
+        wordEls[idx].classList.add("now");
+        if (!v.paused) wordEls[idx].scrollIntoView({block:"center", behavior:"smooth"});
+      }
+      lastWord = idx;
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+$("#bar").onclick = ev => {
+  const r = ev.currentTarget.getBoundingClientRect();
+  seek(T0 + (ev.clientX - r.left) / r.width * (T1 - T0));
+};
+$("#btnSkip").onclick = ev => { skipMode = !skipMode; ev.currentTarget.classList.toggle("on", skipMode); };
+$("#btnPrev").onclick = () => step(-1);
+$("#btnNext").onclick = () => step(1);
+$("#btnIn").onclick = () => setIn();
+$("#btnOut").onclick = () => setOut();
+$("#btnReset").onclick = () => {
+  if (!confirm("Вернуть исходные предложения и удалить ручные вырезки?")) return;
+  edits = edits.filter(e => e.kind !== "manual");
+  edits.forEach(e => e.on = e.default_on);
+  renderTranscript(); changed();
+};
+$("#btnExport").onclick = () => {
+  const out = { source: DATA.source, range: DATA.range, edits };
+  const blob = new Blob([JSON.stringify(out, null, 1)], {type: "application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = DATA.exportName;
+  a.click();
+};
+function setIn() { markIn = v.currentTime; $("#btnIn").textContent = "[ " + fmt(markIn); }
+function setOut() {
+  if (markIn === null) return;
+  const a = Math.min(markIn, v.currentTime), b = Math.max(markIn, v.currentTime);
+  if (b - a > 0.05) {
+    const id = Math.max(...edits.map(e => e.id), 0) + 1;
+    edits.push({ id, kind: "manual", start: a, end: b, on: true, default_on: true, removed: "ручная вырезка" });
+    changed(); select(id);
+  }
+  markIn = null; $("#btnIn").textContent = "[ I";
+}
+document.addEventListener("keydown", ev => {
+  if (!DATA || (ev.target.tagName === "INPUT" && ev.target.type !== "checkbox")) return;
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const k = ev.key.toLowerCase();
+  if (k === " ") { ev.preventDefault(); v.paused ? v.play() : v.pause(); stopAt = null; }
+  else if (k === "k" || k === "л" || k === "arrowdown") { ev.preventDefault(); step(1); }
+  else if (k === "j" || k === "о" || k === "arrowup") { ev.preventDefault(); step(-1); }
+  else if ((k === "x" || k === "ч") && cur >= 0) { const e = edits.find(e => e.id === cur); if (e) { e.on = !e.on; changed(); select(cur); } }
+  else if (k === "enter" && cur >= 0) { const e = edits.find(e => e.id === cur); e && preview(e); }
+  else if (k === "i" || k === "ш") setIn();
+  else if (k === "o" || k === "щ") setOut();
+});
+v.addEventListener("loadedmetadata", () => { if (v.currentTime < T0 + 0.05) v.currentTime = T0 + 0.05; });
+
+// ---------------------------------------------------------------- app mode: background jobs
+const JOB = { llm: "Проверка LLM", render: "Сборка видео", detect: "Поиск правок", process: "Обработка" };
+let pollTimer = null;
+function showJob(text, cls, frac, btn) {
+  const box = $("#job");
+  box.className = "show " + (cls || "");
+  document.body.classList.add("hasjob");
+  $("#jobText").textContent = text;
+  const bar = $("#jobBar");
+  bar.style.display = cls === "run" ? "" : "none";
+  bar.classList.toggle("indet", frac == null);
+  bar.querySelector("i").style.width = (frac == null ? 30 : frac * 100) + "%";
+  const b = $("#jobBtn");
+  b.style.display = btn ? "" : "none";
+  if (btn) { b.textContent = btn.text; b.onclick = btn.fn; }
+}
+function hideJob() { $("#job").className = ""; document.body.classList.remove("hasjob"); }
+function setBusy(busy) { ["#btnLLM", "#btnRender", "#btnXML"].forEach(s => $(s).disabled = busy || (s === "#btnLLM" && !DATA.llm_ready)); }
+
+// seen: a job was queued/running while we watched (at page load a finished job is not news)
+async function poll(onDone, seen) {
+  clearTimeout(pollTimer);
+  let p;
+  try { p = await api(`/api/projects/${APP.project}`); } catch (e) { pollTimer = setTimeout(() => poll(onDone, seen), 2000); return; }
+  const st = p.status || {};
+  if (["queued", "running"].includes(st.state)) {
+    setBusy(true);
+    const pct = st.progress == null ? "" : ` · ${Math.round(st.progress * 100)}%`;
+    showJob(`${JOB[st.job] || "Обработка"}: ${st.message || ""}${pct}`, "run", st.progress,
+      { text: "Отменить", fn: () => api(`/api/projects/${APP.project}/cancel`, { method: "POST", body: {} }) });
+    pollTimer = setTimeout(() => poll(onDone, true), 1000);
+    return;
+  }
+  setBusy(false);
+  if (seen && onDone) onDone(st, p);
+}
+function afterJob(st, p) {
+  if (st.state === "error") showJob(`${JOB[st.job] || "Задача"}: ошибка — ${st.error}`, "err", null, { text: "Скрыть", fn: hideJob });
+  else if (st.state === "cancelled") showJob(`${JOB[st.job] || "Задача"} отменена`, "", null, { text: "Скрыть", fn: hideJob });
+  else if (st.job === "render" && st.state === "done") showJob(`Готово: ${p.output}`, "ok", null,
+      { text: "Показать в папке", fn: () => api(`/api/projects/${APP.project}/reveal`, { method: "POST", body: {} }) });
+  else hideJob();
+  if (st.job === "llm" || st.job === "detect") reloadData();
+}
+async function reloadData() {
+  const t = v.currentTime;
+  load(await api(`/api/projects/${APP.project}/review`), true);
+  v.currentTime = t;
+}
+$("#btnLLM").onclick = async () => {
+  try { await api(`/api/projects/${APP.project}/llm`, { method: "POST", body: {} }); poll(afterJob, true); }
+  catch (e) { showJob(e.message, "err", null, { text: "Скрыть", fn: hideJob }); }
+};
+$("#btnRender").onclick = async () => {
+  clearTimeout(saveTimer); persist(); await new Promise(r => setTimeout(r, 450));  // flush decisions first
+  try { await api(`/api/projects/${APP.project}/render`, { method: "POST", body: { format: "mp4" } }); poll(afterJob, true); }
+  catch (e) { showJob(e.message, "err", null, { text: "Скрыть", fn: hideJob }); }
+};
+$("#btnXML").onclick = async () => {
+  clearTimeout(saveTimer); persist(); await new Promise(r => setTimeout(r, 450));
+  try {
+    const r = await api(`/api/projects/${APP.project}/render`, { method: "POST", body: { format: "fcpxml" } });
+    showJob(`Таймлайн сохранён: ${r.output}`, "ok", null,
+      { text: "Показать в папке", fn: () => api(`/api/projects/${APP.project}/reveal`, { method: "POST", body: { path: r.output } }) });
+  } catch (e) { showJob(e.message, "err", null, { text: "Скрыть", fn: hideJob }); }
+};
+
+$("#btnReport").onclick = async () => {
+  if (!confirm("Будет создан zip-файл для разработчика: журнал программы, сведения о системе, найденные правки по этому уроку (с текстом расшифровки) и ваши решения. Видео в него не попадёт.")) return;
+  try { const r = await api("/api/report", { method: "POST", body: { project: APP.project } });
+    showJob(`Отчёт сохранён: ${r.path}`, "ok", null, { text: "Скрыть", fn: hideJob }); }
+  catch (e) { showJob(e.message, "err", null, { text: "Скрыть", fn: hideJob }); }
+};
+// a file dropped on this page must not replace it (the app window would navigate to the video)
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => e.preventDefault());
+
+async function boot() {
+  if (EMBED) { load(EMBED); }
+  else if (APP) {
+    document.body.classList.add("app");
+    try { load(await api(`/api/projects/${APP.project}/review`)); }
+    catch (e) { $("#loading").textContent = "Не удалось открыть урок: " + e.message; return; }
+    poll(afterJob);
+  }
+  requestAnimationFrame(tick);
+}
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retake</title>
+<!--RETAKE-->
+<style>
+:root {
+  --bg:#f6f5f2; --panel:#fff; --ink:#1d1d1f; --muted:#6e6e73; --line:#e2e0db; --accent:#1f6feb;
+  --ok:#1a7f37; --warn:#b35900; --err:#cf222e; --track:#ebe9e4;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#151517; --panel:#1f1f22; --ink:#ececf0; --muted:#9a9aa2; --line:#33333a; --accent:#4c8dff;
+    --ok:#3fb950; --warn:#e3a34a; --err:#ff6b6b; --track:#2a2a30; }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif; }
+header { display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--line); background:var(--panel); }
+header h1 { margin:0; font-size:17px; font-weight:650; letter-spacing:-.01em; }
+header .sub { color:var(--muted); }
+header .sp { flex:1; }
+main { max-width:860px; margin:0 auto; padding:24px 16px 80px; }
+button { font:inherit; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:8px; padding:6px 12px; cursor:pointer; }
+button:hover { border-color:var(--muted); }
+button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+button.danger { color:var(--err); }
+button.link { border:none; background:none; color:var(--accent); padding:0; }
+button:disabled { opacity:.5; cursor:default; }
+input[type=text], input[type=password], input[type=number], select {
+  font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:6px 9px; }
+input[type=text], input[type=password] { width:100%; }
+.add { background:var(--panel); border:1.5px dashed var(--line); border-radius:12px; padding:22px; text-align:center; }
+.add .big { font-size:15px; padding:10px 20px; }
+.add p { margin:10px 0 0; color:var(--muted); font-size:13px; }
+.pathrow { display:none; gap:8px; margin-top:14px; text-align:left; }
+.pathrow.show { display:flex; }
+.msg { margin-top:10px; color:var(--err); font-size:13px; min-height:1em; }
+h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:28px 0 10px; font-weight:600; }
+.empty { color:var(--muted); padding:8px 0; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px;
+  display:grid; grid-template-columns:1fr auto; gap:6px 16px; align-items:center; }
+.card .name { font-weight:600; font-size:15px; overflow-wrap:anywhere; }
+.card .meta { color:var(--muted); font-size:12.5px; font-variant-numeric:tabular-nums; }
+.card .acts { display:flex; gap:6px; grid-row:1 / span 2; grid-column:2; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+.card .line { grid-column:1 / -1; font-size:13px; }
+.result b { font-variant-numeric:tabular-nums; }
+.progress { display:flex; align-items:center; gap:10px; }
+.bar { flex:1; height:6px; border-radius:3px; background:var(--track); overflow:hidden; position:relative; }
+.bar i { position:absolute; inset:0 auto 0 0; background:var(--accent); border-radius:3px; transition:width .4s; }
+.bar.indet i { width:30% !important; animation:slide 1.3s infinite ease-in-out; }
+@keyframes slide { from { left:-30%; } to { left:100%; } }
+.err { color:var(--err); }
+.warn { color:var(--warn); }
+.ok { color:var(--ok); }
+.banner { background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:10px; padding:12px 14px; margin-bottom:16px; display:none; gap:12px; align-items:center; flex-wrap:wrap; }
+.banner.show { display:flex; }
+.banner .txt { flex:1; min-width:240px; }
+footer { max-width:860px; margin:0 auto; padding:0 16px 40px; color:var(--muted); font-size:12.5px; display:flex; gap:14px; flex-wrap:wrap; }
+footer button.link { font-size:12.5px; }
+body.dragging .add { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+@media (max-width:600px) { .card { grid-template-columns:1fr; } .card .acts { grid-row:auto; grid-column:1; justify-content:flex-start; } }
+
+dialog { border:1px solid var(--line); border-radius:14px; background:var(--panel); color:var(--ink); padding:0; width:min(620px, calc(100vw - 32px)); }
+dialog::backdrop { background:rgba(0,0,0,.35); }
+dialog form { padding:20px 22px; }
+dialog h3 { margin:0 0 4px; font-size:17px; }
+fieldset { border:none; padding:0; margin:18px 0 0; }
+legend { font-weight:600; margin-bottom:8px; padding:0; }
+.row { display:grid; grid-template-columns:150px 1fr; gap:8px 12px; align-items:center; margin:8px 0; }
+.row label { color:var(--muted); }
+.hint { color:var(--muted); font-size:12px; margin:2px 0 0; }
+.presets { display:flex; gap:6px; flex-wrap:wrap; }
+.presets button { font-size:12px; padding:2px 9px; border-radius:99px; }
+.inline { display:flex; gap:8px; align-items:center; }
+.foot { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+.llm-off fieldset.dep { opacity:.5; }
+@media (max-width:600px) { .row { grid-template-columns:1fr; gap:2px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Retake</h1><span class="sub">черновой монтаж уроков</span>
+  <span class="sp"></span>
+  <button id="btnSettings">Настройки</button>
+</header>
+<main>
+  <div class="banner" id="modelBanner"><div class="txt" id="modelText"></div><div class="bar" id="modelBar" style="flex:0 0 160px;display:none"><i></i></div><button id="btnModel" class="primary">Скачать сейчас</button></div>
+  <section class="add">
+    <button class="primary big" id="btnAdd">Добавить запись урока…</button>
+    <p id="addHint">Видео не копируется и не изменяется. Готовый ролик сохранится рядом с ним.</p>
+    <div class="pathrow" id="pathRow">
+      <input type="text" id="pathInput" placeholder="/Users/…/Movies/урок.mp4 — путь к файлу">
+      <button id="btnPath" class="primary">Добавить</button>
+    </div>
+    <div class="msg" id="addMsg"></div>
+    <button class="link" id="btnShowPath" style="font-size:12px;margin-top:6px">указать путь вручную</button>
+  </section>
+
+  <h2>Уроки</h2>
+  <div id="list"><div class="empty">Загрузка…</div></div>
+</main>
+<footer>
+  <span id="ver"></span>
+  <button class="link" id="btnReport" title="Собрать журнал и сведения о системе в zip-файл, чтобы отправить разработчику">Сообщить о проблеме</button>
+  <button class="link" id="btnLog">Журнал</button>
+  <button class="link" id="btnFeedback" style="display:none">Написать разработчику</button>
+</footer>
+
+<dialog id="dlg">
+  <form method="dialog" id="form">
+    <h3>Настройки</h3>
+    <fieldset>
+      <legend>Распознавание речи</legend>
+      <div class="row"><label for="wLang">Язык урока</label>
+        <select id="wLang"><option value="ru">русский (японские слова — кириллицей)</option><option value="">определять автоматически</option></select></div>
+      <div class="row" id="hfRow"><label for="hfUrl">Откуда качать модель</label>
+        <div><input type="text" id="hfUrl" placeholder="https://huggingface.co"><p class="hint">Зеркало, если huggingface.co недоступен или медленный.</p></div></div>
+    </fieldset>
+    <fieldset>
+      <legend>Паузы</legend>
+      <div class="row"><label>Сокращать паузы</label>
+        <div class="inline">длиннее <input type="number" id="minPause" step="0.1" min="0.3" style="width:70px"> с до <input type="number" id="keepPause" step="0.1" min="0" style="width:70px"> с</div></div>
+      <p class="hint">Изменения применятся к новым урокам или после «Найти заново» в карточке урока.</p>
+    </fieldset>
+    <fieldset id="llmSet">
+      <legend><label><input type="checkbox" id="llmOn"> Второе мнение языковой модели (LLM)</label></legend>
+      <p class="hint" style="margin-bottom:8px">Модель читает расшифровку, проверяет найденные дубли и ищет пропущенные: оговорки, служебные разговоры. В облако уходит только текст, не видео. Подходит любой OpenAI-совместимый API, в том числе локальный Ollama или LM Studio.</p>
+      <div class="row"><label for="llmUrl">Адрес API</label>
+        <div><input type="text" id="llmUrl" placeholder="https://api.proxyapi.ru/v1">
+          <div class="presets" style="margin-top:6px">
+            <button type="button" data-url="https://api.proxyapi.ru/v1">ProxyAPI</button>
+            <button type="button" data-url="https://api.openai.com/v1">OpenAI</button>
+            <button type="button" data-url="https://openrouter.ai/api/v1">OpenRouter</button>
+            <button type="button" data-url="http://localhost:11434/v1">Ollama</button>
+            <button type="button" data-url="http://localhost:1234/v1">LM Studio</button>
+          </div></div></div>
+      <div class="row"><label for="llmModel">Модель</label>
+        <div class="inline"><input type="text" id="llmModel" list="models" placeholder="anthropic/claude-haiku-5-5"><datalist id="models"></datalist>
+          <button type="button" id="btnTest">Проверить</button></div></div>
+      <div class="row"><label></label><div class="hint" id="testMsg"></div></div>
+      <div class="row"><label for="llmKey">Ключ API</label>
+        <div><input type="password" id="llmKey" autocomplete="off" placeholder="sk-…">
+          <p class="hint" id="keyHint"></p></div></div>
+      <div class="row"><label for="llmEffort">Размышления модели</label>
+        <select id="llmEffort"><option value="">по умолчанию</option><option value="low">мало (быстрее, дешевле)</option><option value="medium">средне</option><option value="high">много</option></select></div>
+      <div class="row"><label for="llmApply">Находки модели</label>
+        <select id="llmApply"><option value="high">отмечать к вырезке, только если модель уверена</option><option value="medium">отмечать и вероятные</option></select></div>
+    </fieldset>
+    <div class="foot">
+      <button value="cancel" formnovalidate>Отмена</button>
+      <button class="primary" id="btnSave" value="default">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const R = window.RETAKE;
+const $ = s => document.querySelector(s);
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { "X-Retake-Token": R.token, "Content-Type": "application/json" },
+    body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const hms = t => { t = Math.round(t || 0); const h = Math.floor(t/3600), m = Math.floor(t%3600/60), s = t%60;
+  return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(s).padStart(2,"0"); };
+const STEP = { new:"ожидает", queued:"в очереди", running:"обработка", done:"готово", error:"ошибка", cancelled:"отменено" };
+const JOB = { process:"обработка", detect:"поиск правок", llm:"проверка LLM", render:"сборка видео" };
+
+let S = null;
+let timer = null;
+
+async function refresh() {
+  try { S = await api("/api/state"); } catch (e) { $("#list").innerHTML = `<div class="err">Нет связи с приложением: ${esc(e.message)}</div>`; return schedule(5000); }
+  render();
+  const busy = S.projects.some(p => ["queued","running"].includes(p.status?.state)) || S.model?.state === "downloading";
+  schedule(busy ? 1000 : 5000);
+}
+function schedule(ms) { clearTimeout(timer); timer = setTimeout(refresh, ms); }
+
+const MB = n => (n / 1e6).toFixed(0);
+function renderModel() {
+  const m = S.model || {}, box = $("#modelBanner");
+  if (!m.needed || m.ready) { box.classList.remove("show"); return; }
+  box.classList.add("show");
+  const bar = $("#modelBar");
+  if (m.state === "downloading") {
+    $("#modelText").textContent = `Скачивается модель распознавания речи: ${MB(m.done || 0)} из ${MB(m.total || m.size)} МБ. Это нужно один раз.`;
+    bar.style.display = ""; bar.querySelector("i").style.width = ((m.done || 0) / (m.total || m.size) * 100) + "%";
+    $("#btnModel").style.display = "none";
+  } else {
+    $("#modelText").textContent = (m.state === "error" ? `Не удалось скачать модель: ${m.error}. ` : "")
+      + `Для распознавания речи нужна модель (${(m.size / 1e9).toFixed(1)} ГБ). Она скачается один раз — сейчас или при первой обработке урока.`;
+    bar.style.display = "none"; $("#btnModel").style.display = "";
+    $("#btnModel").textContent = m.state === "error" ? "Попробовать ещё раз" : "Скачать сейчас";
+  }
+}
+function render() {
+  $("#ver").textContent = "Retake " + S.version;
+  $("#btnFeedback").style.display = S.feedback_url ? "" : "none";
+  $("#addHint").textContent = S.desktop
+    ? "Или перетащите видео в это окно. Видео не копируется и не изменяется, готовый ролик сохранится рядом с ним."
+    : "Видео не копируется и не изменяется. Готовый ролик сохранится рядом с ним.";
+  renderModel();
+  const L = $("#list");
+  if (!S.projects.length) { L.innerHTML = `<div class="empty">Пока пусто. Добавьте запись — расшифровка 50-минутного урока занимает несколько минут.</div>`; return; }
+  L.innerHTML = "";
+  for (const p of S.projects) L.appendChild(card(p));
+}
+
+function card(p) {
+  const st = p.status || {};
+  const busy = ["queued","running"].includes(st.state);
+  const d = document.createElement("div");
+  d.className = "card";
+  const created = p.created ? new Date(p.created * 1000).toLocaleDateString("ru-RU", {day:"numeric", month:"long"}) : "";
+  let line = "";
+  if (busy) {
+    const pct = st.progress == null ? null : Math.round(st.progress * 100);
+    line = `<div class="progress"><span>${esc(JOB[st.job] || "")}: ${esc(st.message || "")}${pct != null ? " · " + pct + "%" : ""}</span>
+      <div class="bar ${pct == null ? "indet" : ""}"><i style="width:${pct ?? 30}%"></i></div></div>`;
+  } else if (st.state === "error") {
+    line = `<span class="err">Ошибка${st.job ? " (" + esc(JOB[st.job]) + ")" : ""}: ${esc(st.error)}</span>`;
+  } else if (p.result) {
+    const r = p.result, k = r.kinds || {};
+    line = `<span class="result">${hms(r.length)} → <b>${hms(r.length - r.cut)}</b> · дублей ${k.retake || 0}${k.aside ? ", не по уроку " + k.aside : ""}, пауз ${k.pause || 0}`
+      + (r.llm ? ` · <span class="ok">проверено LLM</span>` : "") + `</span>`;
+  }
+  if (p.llm_error && !busy) line += `<div class="warn">LLM не сработала: ${esc(p.llm_error)}</div>`;
+  if (!p.exists) line += `<div class="warn">Видео не найдено по старому пути. <button class="link" data-a="relink">Указать новое расположение</button></div>`;
+  if (p.output && !busy && st.job === "render" && st.state === "done") line += `<div class="ok">Готовый ролик: ${esc(p.output)} <button class="link" data-a="reveal">показать</button></div>`;
+
+  const acts = [];
+  if (busy) acts.push(`<button data-a="cancel">Отменить</button>`);
+  else {
+    if (p.result) acts.push(`<button class="primary" data-a="open">Открыть</button>`);
+    else if (st.state !== "new") acts.push(`<button class="primary" data-a="process">Обработать</button>`);
+    if (p.result) acts.push(`<button data-a="detect" title="Применить новые настройки пауз (решения по правкам сохранятся)">Найти заново</button>`);
+    acts.push(`<button class="danger" data-a="delete" title="Удалить проект (видео не трогается)">Удалить</button>`);
+  }
+  d.innerHTML = `<div><div class="name">${esc(p.name)}</div>
+      <div class="meta">${hms(p.duration)} · добавлен ${esc(created)} · ${esc(STEP[st.state] || "")}</div></div>
+    <div class="acts">${acts.join("")}</div>
+    ${line ? `<div class="line">${line}</div>` : ""}`;
+  d.querySelectorAll("[data-a]").forEach(b => b.onclick = () => action(p, b.dataset.a));
+  return d;
+}
+
+async function action(p, a) {
+  try {
+    if (a === "open") { location.href = "/p/" + encodeURIComponent(p.id); return; }
+    if (a === "delete") {
+      if (!confirm(`Удалить проект «${p.name}»? Расшифровка и решения пропадут, само видео останется на месте.`)) return;
+      await api("/api/projects/" + p.id, { method: "DELETE" });
+    } else if (a === "relink") {
+      const path = S.desktop ? await pickNative() : prompt("Новый путь к видео:", p.source);
+      if (!path) return;
+      await api(`/api/projects/${p.id}/relink`, { method: "POST", body: { path } });
+    } else {
+      await api(`/api/projects/${p.id}/${a}`, { method: "POST", body: {} });
+    }
+  } catch (e) { alert(e.message); }
+  refresh();
+}
+
+async function addPath(path) {
+  $("#addMsg").textContent = "";
+  if (!path) return;
+  try {
+    const p = await api("/api/projects", { method: "POST", body: { path } });
+    $("#pathInput").value = "";
+    await refresh();
+    if (p.result && !["queued","running"].includes(p.status?.state)) location.href = "/p/" + encodeURIComponent(p.id);
+  } catch (e) { $("#addMsg").textContent = e.message; }
+}
+async function pickNative() {
+  const api = window.pywebview && window.pywebview.api;
+  return api && api.pick_file ? await api.pick_file() : null;
+}
+$("#btnAdd").onclick = async () => {
+  if (S?.desktop) { const p = await pickNative(); if (p) addPath(p); return; }
+  if (!S?.can_pick) { $("#pathRow").classList.add("show"); $("#pathInput").focus(); return; }
+  try { const r = await api("/api/pick", { method: "POST", body: {} });
+    if (r.unsupported) { $("#pathRow").classList.add("show"); $("#pathInput").focus(); }
+    else if (r.path) addPath(r.path);
+  } catch (e) { $("#addMsg").textContent = e.message; }
+};
+$("#btnShowPath").onclick = () => { $("#pathRow").classList.toggle("show"); $("#pathInput").focus(); };
+$("#btnPath").onclick = () => addPath($("#pathInput").value.trim());
+$("#pathInput").onkeydown = e => { if (e.key === "Enter") addPath(e.target.value.trim()); };
+// In the app window the path of a dropped file arrives from Python (desktop.py) via retakeDropped;
+// a plain browser does not reveal it, so say so instead of silently ignoring the drop.
+window.retakeDropped = paths => { document.body.classList.remove("dragging"); paths.forEach(addPath); };
+document.addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("dragging"); });
+document.addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("dragging"); });
+document.addEventListener("drop", e => { e.preventDefault(); document.body.classList.remove("dragging");
+  if (!S?.desktop) $("#addMsg").textContent = "Браузер не сообщает путь к перетащенному файлу — нажмите «Добавить запись урока…»."; });
+$("#btnModel").onclick = async () => { try { await api("/api/model/download", { method: "POST", body: {} }); } catch (e) { alert(e.message); } refresh(); };
+$("#btnReport").onclick = async () => {
+  if (!confirm("Будет создан zip-файл с журналом программы, сведениями о системе и настройками (без ключа API). Видео и расшифровки в него не попадут. Отправьте его разработчику.")) return;
+  try { const r = await api("/api/report", { method: "POST", body: {} }); alert("Отчёт сохранён:\n" + r.path); } catch (e) { alert(e.message); }
+};
+$("#btnLog").onclick = () => api("/api/log", { method: "POST", body: {} }).catch(e => alert(e.message));
+$("#btnFeedback").onclick = () => api("/api/open-feedback", { method: "POST", body: {} });
+
+// ---------------------------------------------------------------- settings
+const dlg = $("#dlg");
+function fillSettings(s) {
+  $("#wLang").value = s.whisper.language || "";
+  $("#hfUrl").value = s.whisper.hf_endpoint || "";
+  $("#hfRow").style.display = S?.model?.needed ? "" : "none";
+  $("#minPause").value = s.detect.min_pause;
+  $("#keepPause").value = s.detect.keep_pause;
+  $("#llmOn").checked = !!s.llm.enabled;
+  $("#llmUrl").value = s.llm.base_url || "";
+  $("#llmModel").value = s.llm.model || "";
+  $("#llmKey").value = "";
+  $("#llmEffort").value = s.llm.reasoning_effort || "";
+  $("#llmApply").value = s.llm.auto_apply || "high";
+  $("#keyHint").textContent = s.llm.has_key
+    ? (s.llm.key_from_env ? `Ключ взят из .env (${s.llm.key_hint}). Введите другой, чтобы заменить.` : `Сохранён ключ ${s.llm.key_hint}. Оставьте поле пустым, чтобы не менять.`)
+    : "Для локальных Ollama и LM Studio ключ не нужен.";
+  $("#testMsg").textContent = "";
+  toggleLLM();
+}
+function toggleLLM() { $("#llmSet").querySelectorAll(".row").forEach(r => r.style.opacity = $("#llmOn").checked ? 1 : .5); }
+$("#llmOn").onchange = toggleLLM;
+document.querySelectorAll(".presets button").forEach(b => b.onclick = () => { $("#llmUrl").value = b.dataset.url; });
+$("#btnSettings").onclick = async () => { fillSettings(await api("/api/settings")); dlg.showModal(); };
+$("#btnTest").onclick = async () => {
+  const m = $("#testMsg"); m.className = "hint"; m.textContent = "Проверяю…";
+  try {
+    const r = await api("/api/llm/models", { method: "POST", body: { base_url: $("#llmUrl").value.trim(), model: $("#llmModel").value.trim(), api_key: $("#llmKey").value.trim() } });
+    $("#models").innerHTML = r.models.slice(0, 2000).map(id => `<option value="${esc(id)}">`).join("");
+    m.className = "hint " + (r.model_found === false ? "warn" : "ok");
+    m.textContent = `Соединение есть, моделей: ${r.models.length}.` + (r.model_found === false ? " Указанной модели в списке нет — проверьте название." : r.model_found ? " Модель найдена." : " Выберите модель из списка.");
+  } catch (e) { m.className = "hint err"; m.textContent = e.message; }
+};
+$("#form").onsubmit = async ev => {
+  if (ev.submitter?.value !== "default") return;
+  ev.preventDefault();
+  try {
+    await api("/api/settings", { method: "PUT", body: {
+      whisper: { language: $("#wLang").value, hf_endpoint: $("#hfUrl").value.trim() || "https://huggingface.co" },
+      detect: { min_pause: +$("#minPause").value, keep_pause: +$("#keepPause").value },
+      llm: { enabled: $("#llmOn").checked, base_url: $("#llmUrl").value.trim(), model: $("#llmModel").value.trim(),
+             api_key: $("#llmKey").value.trim(), reasoning_effort: $("#llmEffort").value, auto_apply: $("#llmApply").value },
+    }});
+    dlg.close(); refresh();
+  } catch (e) { alert(e.message); }
+};
+
+refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+Retake bundles third-party software:
+
+- FFmpeg 9.0.2 (static build by Martin Riedl, https://ffmpeg.martin-riedl.de), licensed under the
+  GNU GPL version 3 (built with --enable-gpl --enable-version3, includes x264/x265).
+  Source code: https://ffmpeg.org/download.html and https://ffmpeg.martin-riedl.de
+- MLX and mlx-whisper (Apple, MIT license), Whisper model weights large-v3-turbo (OpenAI, MIT license),
+  converted by mlx-community (downloaded at first use from Hugging Face).
+- pywebview (BSD), numpy, scipy, numba, llvmlite (BSD), rapidfuzz (MIT), tiktoken (MIT),
+  huggingface_hub (Apache 2.0), Python (PSF license).
