@@ -120,8 +120,10 @@ class Handler(BaseHTTPRequestHandler):
         html = (UI / name).read_text() if name != "review" else (HERE / "review_template.html").read_text()
         boot = json.dumps({"token": TOKEN, "project": project})
         html = html.replace("<!--RETAKE-->", f"<script>window.RETAKE = {boot};</script>", 1)
+        # pywebview injects its bridge to Python with eval(): allowed in the app window only
+        evals = " 'unsafe-eval'" if DESKTOP else ""
         self._send(200, html.encode(), "text/html; charset=utf-8",
-                   {"Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+                   {"Content-Security-Policy": f"default-src 'self'; script-src 'self' 'unsafe-inline'{evals}; "
                                                "style-src 'self' 'unsafe-inline'; media-src 'self'; "
                                                "img-src 'self' data:; connect-src 'self'"})
 
