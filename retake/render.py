@@ -87,15 +87,15 @@ def _render_mp4(src: Path, keep, fps: Fraction, out: Path, encoder: str, t_end: 
         # splice is sample-accurate and A/V stays in sync over hundreds of cuts
         f"[0:a]aresample=48000,asetnsamples=n=48:p=0,aselect='{asel}',asetpts=N/SR/TB[a]"
     )
-    script = out.with_suffix(".filter.txt")
-    script.write_text(fc)
     venc = {
         "x264": ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-tune", "stillimage"],
         "nvenc": ["-c:v", "h264_nvenc", "-preset", "p5", "-cq", "23"],
         "videotoolbox": ["-c:v", "h264_videotoolbox", "-q:v", "65"],  # Apple Silicon hardware encoder
     }[encoder]
     cmd = ["ffmpeg", "-v", "error", "-nostats", "-progress", "pipe:1", "-y", "-to", f"{t_end + 1:.3f}",
-           "-i", str(src), "-filter_complex_script", str(script), "-map", "[v]", "-map", "[a]",
+           # the graph goes inline: -filter_complex_script is gone in ffmpeg 8+, and its replacement
+           # (-/filter_complex) does not exist before 7; even 500 cuts are well under the argv limit
+           "-i", str(src), "-filter_complex", fc, "-map", "[v]", "-map", "[a]",
            *venc, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k",
            "-movflags", "+faststart", str(out)]
     total = float(sum(b - a for a, b in keep) / fps)
@@ -116,8 +116,6 @@ def _render_mp4(src: Path, keep, fps: Fraction, out: Path, encoder: str, t_end: 
         proc.wait()
         out.unlink(missing_ok=True)
         raise
-    finally:
-        script.unlink(missing_ok=True)
 
 
 def write_fcpxml(src: Path, keep, info: dict, out: Path):
