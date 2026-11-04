@@ -2,11 +2,16 @@
 
   python retake/desktop.py [--debug]     # what Retake.app runs
   python retake/desktop.py --selftest    # end-to-end check of a build, no window
+  python retake/desktop.py --smoke       # open the real window, check the page loads, quit (CI)
 """
 import json
 import multiprocessing
+import os
 import subprocess
 import sys
+import threading
+import time
+import traceback
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -103,10 +108,58 @@ def main():
         window.confirm_close = app.jobs_running()
 
     win.events.closing += on_closing
-    webview.start(localization=RU, private_mode=False, debug="--debug" in sys.argv,
+    result: dict = {}
+    smoke = "--smoke" in sys.argv
+    if smoke:  # never hang a CI job
+        threading.Thread(target=lambda: (time.sleep(120), print("SMOKE: timeout", flush=True), os._exit(3)),
+                         daemon=True).start()
+    print("starting window", flush=True)
+    webview.start(func=smoke_check if smoke else None, args=(win, result) if smoke else None,
+                  localization=RU, private_mode=False, debug="--debug" in sys.argv,
                   storage_path=str(config.app_dir() / "webview"))
     srv.shutdown()
+    if smoke:
+        print("SMOKE " + ("PASSED" if result.get("ok") else "FAILED"), flush=True)
+        sys.exit(0 if result.get("ok") else 1)
+
+
+def smoke_check(win, result: dict) -> None:
+    """Runs beside the GUI loop: the page must load and talk to the server and to Python."""
+    try:
+        if not win.events.loaded.wait(60):
+            print("SMOKE: the page did not load in 60 s", flush=True)
+            return
+        for _ in range(40):  # the page fetches /api/state, then renders the version
+            r = win.evaluate_js("JSON.stringify({ver: (document.querySelector('#ver') || {}).textContent || '',"
+                                " api: !!(window.pywebview && window.pywebview.api && window.pywebview.api.pick_file)})")
+            info = json.loads(r) if isinstance(r, str) else (r or {})
+            if info.get("ver") and info.get("api"):
+                break
+            time.sleep(0.5)
+        print(f"SMOKE page: {info}", flush=True)
+        result["ok"] = bool(info.get("ver")) and bool(info.get("api"))
+    except Exception:  # noqa: BLE001
+        traceback.print_exc()
+    finally:
+        win.destroy()
+
+
+def run():
+    """Entry point: an error at start-up is shown in a dialog, not a silent exit."""
+    try:
+        main()
+    except SystemExit:
+        raise
+    except BaseException as e:  # noqa: BLE001
+        traceback.print_exc()
+        try:
+            log = runtime.log_path()
+        except Exception:  # noqa: BLE001
+            log = "~/Library/Application Support/Retake/logs/retake.log"
+        message(f"Retake не смог запуститься:\n{e.__class__.__name__}: {e}\n\n"
+                f"Подробности в журнале:\n{log}\nПришлите этот файл разработчику.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    run()

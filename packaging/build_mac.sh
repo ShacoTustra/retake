@@ -80,6 +80,12 @@ du -sh "$APP"
 if [ "${SKIP_SELFTEST:-0}" != 1 ]; then
   echo "== Self-test of the built app"
   "$APP/Contents/MacOS/Retake" --selftest
+  echo "== Launch test: the real window opens and the page loads"
+  if ! "$APP/Contents/MacOS/Retake" --smoke; then
+    echo "LAUNCH TEST FAILED; app log:"
+    tail -80 "$HOME/Library/Application Support/Retake/logs/retake.log" || true
+    exit 1
+  fi
 fi
 
 echo "== Disk image"
