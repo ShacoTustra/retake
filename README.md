@@ -19,13 +19,15 @@
 со ссылкой для тестеров. Сборка с самотестом занимает ~15–20 минут.
 
 ```bash
-git tag v0.1.0-beta.1 && git push origin main --tags     # версия — в retake/runtime.py
+git tag v0.1.0-beta.2 && git push origin main --tags     # версия — в retake/runtime.py
 ```
 
 То же локально на любом Mac с Apple Silicon: `packaging/build_mac.sh` (нужен Python 3.12+).
 Скрипт ставит зависимости, скачивает статический ffmpeg (контрольные суммы зафиксированы), собирает
 `Retake.app` через PyInstaller, подписывает ad-hoc, **запускает самотест собранного приложения**
 (распознавание маленькой моделью, поиск, сборка ролика, локальный сервер) и упаковывает `dist/Retake-<версия>.dmg`.
+В CI приложение затем ставится из этого `.dmg` и проверяется как у человека: настоящие клики, системное окно выбора
+файла, перетаскивание из Finder, клавиши, экспорт, перезапуск (`tests/mac_app_check.py`).
 Для подписи Developer ID и нотаризации: `CODESIGN_IDENTITY=… NOTARY_PROFILE=… packaging/build_mac.sh`.
 
 Проверить установленное приложение на чужом Mac: `/Applications/Retake.app/Contents/MacOS/Retake --selftest`.

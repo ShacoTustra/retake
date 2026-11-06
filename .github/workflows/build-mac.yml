@@ -29,6 +29,22 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: packaging/build_mac.sh
 
+      - name: Install from the .dmg and use it as a person would
+        run: |
+          hdiutil attach dist/*.dmg -nobrowse -mountpoint /tmp/retake-dmg
+          ditto /tmp/retake-dmg/Retake.app /Applications/Retake.app
+          hdiutil detach /tmp/retake-dmg
+          build/venv/bin/python -m pip install -q pyobjc-framework-ApplicationServices
+          build/venv/bin/python tests/mac_app_check.py --screens screens -- /Applications/Retake.app/Contents/MacOS/Retake
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: screens
+          path: screens
+          if-no-files-found: ignore
+          retention-days: 14
+
       - uses: actions/upload-artifact@v7
         with:
           name: Retake-macOS

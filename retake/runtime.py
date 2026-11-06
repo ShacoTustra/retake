@@ -7,7 +7,7 @@ import sys
 import time
 from pathlib import Path
 
-VERSION = "0.1.0-beta.1"
+VERSION = "0.1.0-beta.2"
 # Where beta testers send feedback (a chat, a form, GitHub issues). Shown in the app when set.
 FEEDBACK_URL = ""
 
