@@ -1,0 +1,44 @@
+/* Colors and type shared by every page. Dark, as editors are: the picture should be the brightest
+   thing on screen. The accents: indigo for "you are here", vermilion for what gets cut. */
+:root {
+  color-scheme: dark;
+  --bg: #131417;
+  --panel: #1c1e22;
+  --panel-2: #24262b;
+  --panel-3: #2e3137;
+  --line: #2b2e34;
+  --line-2: #3d4047;
+  --ink: #ececef;
+  --ink-2: #bcbec6;
+  --muted: #8e919b;
+  --faint: #636670;
+  --accent: #7b93ff;
+  --accent-ink: #0e1120;
+  --cut: #ef6a4c;
+  --ok: #4cc38a;
+  --warn: #efb14c;
+  --err: #ff7b72;
+  --sel: #f7c948;
+  --ai: #b9a2ff;
+  --lane: #191b1f;
+  --wave: #4bb89a;
+  --wave-dim: #27594d;
+  --wave-cut: #3a2f2c;
+  --wave-cut-2: #5b4640;
+  --k-retake: #ef6a4c;
+  --k-aside: #ea6ba0;
+  --k-stutter: #f09a3e;
+  --k-filler: #d8bd45;
+  --k-pause: #6f93e8;
+  --k-manual: #b48cf2;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Noto Sans", sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; cursor: pointer; }
+kbd {
+  font: 600 10.5px/1 var(--font); color: var(--ink-2); background: var(--panel-3);
+  border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 4px; padding: 1px 4px; white-space: nowrap;
+}

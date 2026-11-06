@@ -99,7 +99,7 @@ def main():
 
     bridge = Bridge()
     win = webview.create_window("Retake", url, js_api=bridge, width=1440, height=920, min_size=(980, 640),
-                                text_select=True, background_color="#f6f5f2")
+                                text_select=True, background_color="#131417")
     bridge._window = win
     win.events.loaded += on_loaded
 

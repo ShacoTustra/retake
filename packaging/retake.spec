@@ -12,7 +12,6 @@ sys.path.insert(0, str(SRC))
 from runtime import VERSION  # noqa: E402
 
 datas = [
-    (str(SRC / "review_template.html"), "."),
     (str(SRC / "ui"), "ui"),
     (str(ROOT / "packaging" / "THIRD_PARTY.txt"), "."),
 ]

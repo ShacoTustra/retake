@@ -4,18 +4,24 @@
   project.json     source path, name, status of the last job
   transcript.json  Whisper output
   edits.json       suggested cuts (rules + optional LLM opinion)
-  decisions.json   what the reviewer changed: {"overrides": {id: {"on", "start", "end"}}, "manual": [...]}
+  decisions.json   what the reviewer changed, see Project.save_decisions
   media.npz        cached loudness envelope / static-screen intervals
+  peaks.u8         the same envelope as bytes, for the timeline waveform
+  thumbs.jpg/.json filmstrip for the video track
 """
 import hashlib
 import json
+import math
 import queue
 import shutil
+import subprocess
 import sys
 import threading
 import time
 import traceback
 from pathlib import Path
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 import config  # noqa: E402
@@ -25,6 +31,10 @@ import render as render_mod  # noqa: E402
 import transcribe as transcribe_mod  # noqa: E402
 
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
+THUMB_HEIGHT = 72       # pixels; the video track draws them at about this size on a Retina screen
+THUMB_COLS = 25
+THUMB_MIN_INTERVAL = 5.0
+THUMB_MAX_COUNT = 625   # a longer video gets rarer frames, the sprite stays about the same size
 
 
 class Cancelled(Exception):
@@ -77,15 +87,28 @@ class Project:
         return _read(self.dir / "edits.json")
 
     def decisions(self) -> dict:
-        return _read(self.dir / "decisions.json", {"overrides": {}, "manual": []})
+        return _read(self.dir / "decisions.json", {"overrides": {}, "manual": [], "splits": []})
 
     def save_decisions(self, d: dict) -> None:
+        """overrides: {id: {on, start, end, orig_start, orig_end, reviewed}}: changes to a suggestion.
+        orig_* is the span the suggestion had when it was changed, see final_edits.
+        manual: cuts the reviewer made. splits: positions of the blade on the timeline."""
+        overrides = {}
+        for k, v in (d.get("overrides") or {}).items():
+            start, end = float(v["start"]), float(v["end"])
+            if end <= start:
+                raise ValueError("конец правки раньше начала")
+            overrides[str(k)] = {"on": bool(v["on"]), "start": start, "end": end,
+                                 "orig_start": float(v.get("orig_start", start)),
+                                 "orig_end": float(v.get("orig_end", end)),
+                                 "reviewed": bool(v.get("reviewed"))}
         clean = {
-            "overrides": {str(k): {"on": bool(v["on"]), "start": float(v["start"]), "end": float(v["end"])}
-                          for k, v in (d.get("overrides") or {}).items()},
+            "overrides": overrides,
             "manual": [{"id": int(m["id"]), "kind": "manual", "start": float(m["start"]), "end": float(m["end"]),
-                        "on": bool(m.get("on", True)), "removed": "ручная вырезка"}
+                        "on": bool(m.get("on", True)), "reviewed": True,
+                        "removed": str(m.get("removed") or "ручная вырезка")[:4000]}
                        for m in (d.get("manual") or []) if float(m["end"]) > float(m["start"])],
+            "splits": sorted(float(t) for t in (d.get("splits") or [])),
         }
         _write(self.dir / "decisions.json", clean)
 
@@ -100,19 +123,81 @@ class Project:
         out = []
         for e in doc["edits"]:
             e = dict(e)
+            e["orig_start"], e["orig_end"] = e["start"], e["end"]
             o = ov.get(str(e["id"]))
-            # a decision only applies to the same cut: ids can be reused after re-detection
-            if o and abs(o["start"] - e["start"]) < 0.05 and abs(o["end"] - e["end"]) < 0.05:
+            # A decision only applies to the same cut: ids can be reused after re-detection.
+            # Files written before trimming existed have no orig_*: their start/end are the original span.
+            if o and abs(o.get("orig_start", o["start"]) - e["start"]) < 0.05 \
+                    and abs(o.get("orig_end", o["end"]) - e["end"]) < 0.05:
                 e["on"] = o["on"]
+                e["start"], e["end"] = o["start"], o["end"]
+                e["reviewed"] = bool(o.get("reviewed"))
                 e["changed"] = True
             out.append(e)
         out += [dict(m) for m in dec.get("manual", [])]
         return out
 
+    # ---- what the timeline draws
+    def video_info(self) -> dict:
+        """Frame size and working rate of the source, remembered in project.json."""
+        m = self.meta
+        src = str(m.get("source") or "")
+        info = m.get("video")
+        if info and info.get("source") == src:
+            return info
+        p = render_mod.probe(self.source)
+        info = {"source": src, "w": p["w"], "h": p["h"], "fps": float(p["fps"])}
+        self.save_meta(video=info)
+        return info
+
+    def peaks(self) -> bytes:
+        """Loudness in 10 ms steps as bytes: 0 is -80 dB or quieter, 255 is 0 dB."""
+        out = self.dir / "peaks.u8"
+        cache = self.dir / "media.npz"
+        if out.exists() and (not cache.exists() or out.stat().st_mtime >= cache.stat().st_mtime):
+            return out.read_bytes()
+        doc = self.edits()
+        if not doc:
+            raise RuntimeError("урок ещё не обработан")
+        t0, t1 = doc["range"]
+        env = detect_mod.analyze_media(self.source, t0, t1, cache_dir=self.dir)[0]
+        data = (np.clip((env + 80.0) / 80.0, 0.0, 1.0) * 255.0).astype(np.uint8).tobytes()
+        tmp = out.with_suffix(".tmp")
+        tmp.write_bytes(data)
+        tmp.replace(out)
+        return data
+
+    def thumbs(self) -> dict | None:
+        """Filmstrip description, None until it is made."""
+        if (self.dir / "thumbs.jpg").exists():
+            return _read(self.dir / "thumbs.json")
+        return None
+
+    def make_thumbs(self) -> dict:
+        """One sprite with a frame every few seconds. Only keyframes are decoded, so even a long
+        lesson takes seconds; a frame can be late by one keyframe interval, enough to recognise a page."""
+        info = self.video_info()
+        duration = float(self.meta.get("duration") or render_mod.probe(self.source)["duration"])
+        interval = max(THUMB_MIN_INTERVAL, duration / THUMB_MAX_COUNT)
+        count = int(duration / interval) + 2
+        rows = math.ceil(count / THUMB_COLS)
+        h = THUMB_HEIGHT
+        w = 2 * round(h * info["w"] / info["h"] / 2)
+        tmp = self.dir / "thumbs.part.jpg"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-skip_frame", "nokey", "-i", str(self.source),
+                        "-vf", f"fps=1/{interval},scale={w}:{h},tile={THUMB_COLS}x{rows}",
+                        "-frames:v", "1", "-q:v", "5", str(tmp)],
+                       check=True, capture_output=True, text=True)
+        meta = {"w": w, "h": h, "cols": THUMB_COLS, "rows": rows, "count": count, "interval": interval}
+        _write(self.dir / "thumbs.json", meta)
+        tmp.replace(self.dir / "thumbs.jpg")
+        return meta
+
     def summary(self) -> dict:
         m = self.meta
         out = {k: m.get(k) for k in ("id", "name", "source", "duration", "created", "status", "output", "llm_error")}
         out["exists"] = Path(m.get("source", "")).exists()
+        out["thumbs"] = self.thumbs()
         doc = self.edits()
         if doc:
             t0, t1 = doc["range"]

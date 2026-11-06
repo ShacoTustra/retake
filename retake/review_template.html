@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Проверка дублей</title>
-<!--RETAKE-->
 <style>
 :root {
   --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6e6e73; --line: #e2e0db;
@@ -29,15 +28,7 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 button.on { background:var(--ink); color:var(--panel); }
 button.link { border:none; background:none; color:var(--accent); padding:0; }
 button:disabled { opacity:.5; cursor:default; }
-#job { display:none; align-items:center; gap:10px; padding:6px 16px; background:var(--panel); border-bottom:1px solid var(--line); font-size:13px; }
-#job.show { display:flex; }
-#job .bar { width:220px; height:6px; border-radius:3px; background:var(--track); overflow:hidden; position:relative; }
-#job .bar i { position:absolute; inset:0 auto 0 0; background:var(--accent); transition:width .4s; }
-#job .bar.indet i { width:30% !important; animation:slide 1.3s infinite ease-in-out; }
-@keyframes slide { from { left:-30%; } to { left:100%; } }
-#job.err { color:var(--retake); } #job.ok { color:var(--ok); }
 main { display:grid; grid-template-columns: minmax(420px, 1.1fr) 1fr; gap:0; height: calc(100vh - 53px); }
-body.hasjob main { height: calc(100vh - 87px); }
 @media (max-width: 900px) { main { grid-template-columns: 1fr; height:auto !important; } header h1 { max-width:60vw; } }
 #left { display:flex; flex-direction:column; border-right:1px solid var(--line); min-height:0; }
 video { width:100%; background:#000; max-height:46vh; }
@@ -81,24 +72,17 @@ video { width:100%; background:#000; max-height:46vh; }
 #tr .gap { display:inline-block; font-size:11px; color:var(--pause); padding:0 4px; border:1px dashed var(--pause); border-radius:4px; margin:0 3px; line-height:1.4; cursor:pointer; }
 #tr .gap.on { text-decoration: line-through; opacity:.6; }
 kbd { font: 11px ui-monospace, monospace; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 4px; }
-.app-only { display:none; } body.app .app-only { display:inline-block; } body.app .file-only { display:none; }
 #loading { padding:40px; text-align:center; color:var(--muted); }
 </style>
 </head>
 <body>
 <header>
-  <a class="back app-only" href="/">← Уроки</a>
   <h1 id="title">Проверка дублей</h1>
   <span class="stats" id="stats"></span>
   <span class="sp"></span>
-  <button id="btnLLM" class="app-only" title="Попросить языковую модель проверить находки и поискать пропущенное">Проверить с LLM</button>
   <button id="btnReset" title="Вернуть исходные предложения и удалить ручные вырезки">Сбросить</button>
-  <button id="btnExport" class="primary file-only">Сохранить решения (JSON)</button>
-  <button id="btnReport" class="app-only" title="Собрать журнал, найденные правки и ваши решения по этому уроку в zip-файл для разработчика">Сообщить о проблеме</button>
-  <button id="btnXML" class="app-only" title="Таймлайн для Final Cut Pro / DaVinci Resolve">FCPXML</button>
-  <button id="btnRender" class="primary app-only" title="Собрать ролик без вырезанных мест">Собрать видео</button>
+  <button id="btnExport" class="primary">Сохранить решения (JSON)</button>
 </header>
-<div id="job"><span id="jobText"></span><div class="bar" id="jobBar"><i></i></div><button id="jobBtn" class="link"></button></div>
 <div id="loading">Загрузка…</div>
 <main style="display:none">
   <section id="left">
@@ -119,8 +103,7 @@ kbd { font: 11px ui-monospace, monospace; border:1px solid var(--line); border-b
   <section id="tr"></section>
 </main>
 <script>
-const EMBED = /*__DATA__*/null;     // standalone file made by make_review.py
-const APP = window.RETAKE || null;  // served by app.py
+const EMBED = /*__DATA__*/null;  // filled in by make_review.py
 const KIND = {
   retake:  {name:"Дубль",        color:"var(--retake)"},
   aside:   {name:"Не по уроку",  color:"var(--aside)"},
@@ -136,14 +119,6 @@ const fmt = t => { t = Math.max(0, t); const m = Math.floor(t/60), s = (t%60); r
 const fmtLong = t => { const h=Math.floor(t/3600), m=Math.floor(t%3600/60), s=Math.round(t%60); return (h? h+" ч ":"") + m + " мин " + s + " с"; };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-async function api(path, opts = {}) {
-  const r = await fetch(path, { ...opts, headers: { "X-Retake-Token": APP.token, "Content-Type": "application/json" },
-    body: opts.body ? JSON.stringify(opts.body) : undefined });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || r.statusText);
-  return j;
-}
-
 let DATA, T0, T1, LS_KEY, edits = [];
 let hidden = new Set(["pause"]);  // pauses are many and low-risk: shown in the transcript, not the list
 let focusLLM = false;             // list only what the LLM disagreed with or found
@@ -153,39 +128,24 @@ function load(data, keepView) {
   DATA = data;
   [T0, T1] = DATA.range;
   edits = DATA.edits.map(e => ({...e, default_on: e.default_on ?? e.on}));
-  if (!APP) {
-    LS_KEY = "retake:" + DATA.video + ":" + T0 + ":" + T1;
-    try {
-      const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
-      if (saved) {
-        const st = new Map(saved.states);
-        edits.forEach(e => { if (st.has(e.id)) e.on = st.get(e.id); });
-        (saved.manual || []).forEach(m => edits.push(m));
-      }
-    } catch (_) {}
-  }
+  LS_KEY = "retake:" + DATA.video + ":" + T0 + ":" + T1;
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+    if (saved) {
+      const st = new Map(saved.states);
+      edits.forEach(e => { if (st.has(e.id)) e.on = st.get(e.id); });
+      (saved.manual || []).forEach(m => edits.push(m));
+    }
+  } catch (_) {}
   if (!keepView) { v.src = DATA.video; }
-  const name = APP ? DATA.project.name : (DATA.source || "").split(/[\\/]/).pop();
+  const name = (DATA.source || "").split(/[\\/]/).pop();
   $("#title").textContent = name; document.title = name + " — проверка";
   $("#loading").style.display = "none"; $("main").style.display = "";
   renderTranscript(); changed(true); renderLLMInfo();
 }
 
 // ---------------------------------------------------------------- saving decisions
-let saveTimer = null;
 function persist() {
-  if (APP) {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      const overrides = {};
-      edits.filter(e => e.kind !== "manual" && e.on !== e.default_on)
-           .forEach(e => overrides[e.id] = { on: e.on, start: e.start, end: e.end });
-      api(`/api/projects/${APP.project}/decisions`, { method: "PUT",
-        body: { overrides, manual: edits.filter(e => e.kind === "manual") } })
-        .catch(err => showJob("Не удалось сохранить решения: " + err.message, "err"));
-    }, 400);
-    return;
-  }
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
       states: edits.filter(e => e.kind !== "manual").map(e => [e.id, e.on]),
@@ -247,15 +207,8 @@ function renderLLMInfo() {
     const short = (L.model || "").split("/").pop();
     html = `Проверено LLM (${esc(short)}, ${esc(L.at || "")}): мнение по ${L.verdicts} местам, новых находок ${L.new}.`;
   }
-  if (APP && DATA.project.llm_error) html += ` <span class="err">Последний запуск LLM не удался: ${esc(DATA.project.llm_error)}</span>`;
   box.innerHTML = html;
   box.style.display = html ? "" : "none";
-  if (APP) {
-    const b = $("#btnLLM");
-    b.disabled = !DATA.llm_ready;
-    b.title = DATA.llm_ready ? `Модель: ${DATA.llm_model}. Ваши решения по правкам сохранятся.` : "Укажите адрес API и модель в настройках на главной странице";
-    b.textContent = L ? "Проверить с LLM ещё раз" : "Проверить с LLM";
-  }
 }
 
 function visibleEdits() {
@@ -461,91 +414,8 @@ document.addEventListener("keydown", ev => {
 });
 v.addEventListener("loadedmetadata", () => { if (v.currentTime < T0 + 0.05) v.currentTime = T0 + 0.05; });
 
-// ---------------------------------------------------------------- app mode: background jobs
-const JOB = { llm: "Проверка LLM", render: "Сборка видео", detect: "Поиск правок", process: "Обработка" };
-let pollTimer = null;
-function showJob(text, cls, frac, btn) {
-  const box = $("#job");
-  box.className = "show " + (cls || "");
-  document.body.classList.add("hasjob");
-  $("#jobText").textContent = text;
-  const bar = $("#jobBar");
-  bar.style.display = cls === "run" ? "" : "none";
-  bar.classList.toggle("indet", frac == null);
-  bar.querySelector("i").style.width = (frac == null ? 30 : frac * 100) + "%";
-  const b = $("#jobBtn");
-  b.style.display = btn ? "" : "none";
-  if (btn) { b.textContent = btn.text; b.onclick = btn.fn; }
-}
-function hideJob() { $("#job").className = ""; document.body.classList.remove("hasjob"); }
-function setBusy(busy) { ["#btnLLM", "#btnRender", "#btnXML"].forEach(s => $(s).disabled = busy || (s === "#btnLLM" && !DATA.llm_ready)); }
-
-// seen: a job was queued/running while we watched (at page load a finished job is not news)
-async function poll(onDone, seen) {
-  clearTimeout(pollTimer);
-  let p;
-  try { p = await api(`/api/projects/${APP.project}`); } catch (e) { pollTimer = setTimeout(() => poll(onDone, seen), 2000); return; }
-  const st = p.status || {};
-  if (["queued", "running"].includes(st.state)) {
-    setBusy(true);
-    const pct = st.progress == null ? "" : ` · ${Math.round(st.progress * 100)}%`;
-    showJob(`${JOB[st.job] || "Обработка"}: ${st.message || ""}${pct}`, "run", st.progress,
-      { text: "Отменить", fn: () => api(`/api/projects/${APP.project}/cancel`, { method: "POST", body: {} }) });
-    pollTimer = setTimeout(() => poll(onDone, true), 1000);
-    return;
-  }
-  setBusy(false);
-  if (seen && onDone) onDone(st, p);
-}
-function afterJob(st, p) {
-  if (st.state === "error") showJob(`${JOB[st.job] || "Задача"}: ошибка — ${st.error}`, "err", null, { text: "Скрыть", fn: hideJob });
-  else if (st.state === "cancelled") showJob(`${JOB[st.job] || "Задача"} отменена`, "", null, { text: "Скрыть", fn: hideJob });
-  else if (st.job === "render" && st.state === "done") showJob(`Готово: ${p.output}`, "ok", null,
-      { text: "Показать в папке", fn: () => api(`/api/projects/${APP.project}/reveal`, { method: "POST", body: {} }) });
-  else hideJob();
-  if (st.job === "llm" || st.job === "detect") reloadData();
-}
-async function reloadData() {
-  const t = v.currentTime;
-  load(await api(`/api/projects/${APP.project}/review`), true);
-  v.currentTime = t;
-}
-$("#btnLLM").onclick = async () => {
-  try { await api(`/api/projects/${APP.project}/llm`, { method: "POST", body: {} }); poll(afterJob, true); }
-  catch (e) { showJob(e.message, "err", null, { text: "Скрыть", fn: hideJob }); }
-};
-$("#btnRender").onclick = async () => {
-  clearTimeout(saveTimer); persist(); await new Promise(r => setTimeout(r, 450));  // flush decisions first
-  try { await api(`/api/projects/${APP.project}/render`, { method: "POST", body: { format: "mp4" } }); poll(afterJob, true); }
-  catch (e) { showJob(e.message, "err", null, { text: "Скрыть", fn: hideJob }); }
-};
-$("#btnXML").onclick = async () => {
-  clearTimeout(saveTimer); persist(); await new Promise(r => setTimeout(r, 450));
-  try {
-    const r = await api(`/api/projects/${APP.project}/render`, { method: "POST", body: { format: "fcpxml" } });
-    showJob(`Таймлайн сохранён: ${r.output}`, "ok", null,
-      { text: "Показать в папке", fn: () => api(`/api/projects/${APP.project}/reveal`, { method: "POST", body: { path: r.output } }) });
-  } catch (e) { showJob(e.message, "err", null, { text: "Скрыть", fn: hideJob }); }
-};
-
-$("#btnReport").onclick = async () => {
-  if (!confirm("Будет создан zip-файл для разработчика: журнал программы, сведения о системе, найденные правки по этому уроку (с текстом расшифровки) и ваши решения. Видео в него не попадёт.")) return;
-  try { const r = await api("/api/report", { method: "POST", body: { project: APP.project } });
-    showJob(`Отчёт сохранён: ${r.path}`, "ok", null, { text: "Скрыть", fn: hideJob }); }
-  catch (e) { showJob(e.message, "err", null, { text: "Скрыть", fn: hideJob }); }
-};
-// a file dropped on this page must not replace it (the app window would navigate to the video)
-document.addEventListener("dragover", e => e.preventDefault());
-document.addEventListener("drop", e => e.preventDefault());
-
 async function boot() {
-  if (EMBED) { load(EMBED); }
-  else if (APP) {
-    document.body.classList.add("app");
-    try { load(await api(`/api/projects/${APP.project}/review`)); }
-    catch (e) { $("#loading").textContent = "Не удалось открыть урок: " + e.message; return; }
-    poll(afterJob);
-  }
+  if (EMBED) load(EMBED);
   requestAnimationFrame(tick);
 }
 boot();

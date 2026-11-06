@@ -4,47 +4,47 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Retake</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%237b93ff'/%3E%3Cpath d='M11 8v16l13-8z' fill='%230e1120'/%3E%3C/svg%3E">
 <!--RETAKE-->
+<link rel="stylesheet" href="/ui/theme.css">
 <style>
-:root {
-  --bg:#f6f5f2; --panel:#fff; --ink:#1d1d1f; --muted:#6e6e73; --line:#e2e0db; --accent:#1f6feb;
-  --ok:#1a7f37; --warn:#b35900; --err:#cf222e; --track:#ebe9e4;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --bg:#151517; --panel:#1f1f22; --ink:#ececf0; --muted:#9a9aa2; --line:#33333a; --accent:#4c8dff;
-    --ok:#3fb950; --warn:#e3a34a; --err:#ff6b6b; --track:#2a2a30; }
-}
-* { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--ink);
-  font:14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif; }
-header { display:flex; align-items:center; gap:12px; padding:14px 24px; border-bottom:1px solid var(--line); background:var(--panel); }
-header h1 { margin:0; font-size:17px; font-weight:650; letter-spacing:-.01em; }
+:root { --track:var(--panel-3); }
+body { font-size:14px; line-height:1.5; }
+header { display:flex; align-items:center; gap:10px; padding:12px 24px; border-bottom:1px solid var(--line); background:var(--panel); }
+header .mark { width:24px; height:24px; border-radius:6px; background:var(--accent); display:inline-flex; align-items:center; justify-content:center; }
+header .mark svg { width:13px; height:13px; fill:var(--accent-ink); }
+header h1 { margin:0; font-size:16px; font-weight:650; letter-spacing:-.01em; }
 header .sub { color:var(--muted); }
 header .sp { flex:1; }
-main { max-width:860px; margin:0 auto; padding:24px 16px 80px; }
-button { font:inherit; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:8px; padding:6px 12px; cursor:pointer; }
-button:hover { border-color:var(--muted); }
-button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+main { max-width:920px; margin:0 auto; padding:24px 16px 80px; }
+button { font:inherit; border:1px solid var(--line-2); background:var(--panel-2); color:var(--ink); border-radius:8px; padding:6px 12px; cursor:pointer; }
+button:hover { background:var(--panel-3); }
+button.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:650; }
+button.primary:hover { background:var(--accent); filter:brightness(1.08); }
 button.danger { color:var(--err); }
 button.link { border:none; background:none; color:var(--accent); padding:0; }
 button:disabled { opacity:.5; cursor:default; }
 input[type=text], input[type=password], input[type=number], select {
   font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:6px 9px; }
 input[type=text], input[type=password] { width:100%; }
-.add { background:var(--panel); border:1.5px dashed var(--line); border-radius:12px; padding:22px; text-align:center; }
+.add { background:var(--panel); border:1.5px dashed var(--line-2); border-radius:12px; padding:26px 22px; text-align:center; }
 .add .big { font-size:15px; padding:10px 20px; }
 .add p { margin:10px 0 0; color:var(--muted); font-size:13px; }
 .pathrow { display:none; gap:8px; margin-top:14px; text-align:left; }
 .pathrow.show { display:flex; }
 .msg { margin-top:10px; color:var(--err); font-size:13px; min-height:1em; }
-h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:28px 0 10px; font-weight:600; }
+h2 { font-size:13px; color:var(--muted); margin:26px 0 10px; font-weight:650; }
 .empty { color:var(--muted); padding:8px 0; }
-.card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px;
-  display:grid; grid-template-columns:1fr auto; gap:6px 16px; align-items:center; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px;
+  display:grid; grid-template-columns:auto 1fr auto; gap:4px 14px; align-items:center; }
+.card.openable { cursor:pointer; }
+.card.openable:hover { background:var(--panel-2); }
+.card .thumb { grid-row:1 / span 2; width:124px; height:70px; border-radius:7px; background-color:var(--bg); background-repeat:no-repeat; }
 .card .name { font-weight:600; font-size:15px; overflow-wrap:anywhere; }
 .card .meta { color:var(--muted); font-size:12.5px; font-variant-numeric:tabular-nums; }
-.card .acts { display:flex; gap:6px; grid-row:1 / span 2; grid-column:2; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
-.card .line { grid-column:1 / -1; font-size:13px; }
+.card .acts { display:flex; gap:6px; grid-row:1 / span 2; grid-column:3; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+.card .line { grid-column:2; font-size:13px; }
+.card .line.wide { grid-column:1 / -1; }
 .result b { font-variant-numeric:tabular-nums; }
 .progress { display:flex; align-items:center; gap:10px; }
 .bar { flex:1; height:6px; border-radius:3px; background:var(--track); overflow:hidden; position:relative; }
@@ -57,12 +57,12 @@ h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(-
 .banner { background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:10px; padding:12px 14px; margin-bottom:16px; display:none; gap:12px; align-items:center; flex-wrap:wrap; }
 .banner.show { display:flex; }
 .banner .txt { flex:1; min-width:240px; }
-footer { max-width:860px; margin:0 auto; padding:0 16px 40px; color:var(--muted); font-size:12.5px; display:flex; gap:14px; flex-wrap:wrap; }
+footer { max-width:920px; margin:0 auto; padding:0 16px 40px; color:var(--muted); font-size:12.5px; display:flex; gap:14px; flex-wrap:wrap; }
 footer button.link { font-size:12.5px; }
 body.dragging .add { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, var(--panel)); }
-@media (max-width:600px) { .card { grid-template-columns:1fr; } .card .acts { grid-row:auto; grid-column:1; justify-content:flex-start; } }
+@media (max-width:640px) { .card { grid-template-columns:1fr; } .card .thumb { grid-row:auto; } .card .line { grid-column:1; } .card .acts { grid-row:auto; grid-column:1; justify-content:flex-start; } }
 
-dialog { border:1px solid var(--line); border-radius:14px; background:var(--panel); color:var(--ink); padding:0; width:min(620px, calc(100vw - 32px)); }
+dialog { border:1px solid var(--line-2); border-radius:14px; background:var(--panel); color:var(--ink); padding:0; width:min(620px, calc(100vw - 32px)); }
 dialog::backdrop { background:rgba(0,0,0,.35); }
 dialog form { padding:20px 22px; }
 dialog h3 { margin:0 0 4px; font-size:17px; }
@@ -81,7 +81,7 @@ legend { font-weight:600; margin-bottom:8px; padding:0; }
 </head>
 <body>
 <header>
-  <h1>Retake</h1><span class="sub">черновой монтаж уроков</span>
+  <span class="mark"><svg viewBox="0 0 24 24"><path d="M7 4v16l14-8z"/></svg></span><h1>Retake</h1><span class="sub">монтаж уроков</span>
   <span class="sp"></span>
   <button id="btnSettings">Настройки</button>
 </header>
@@ -212,11 +212,22 @@ function render() {
   for (const p of S.projects) L.appendChild(card(p));
 }
 
+/** A frame from a third into the lesson: the very beginning is often a black screen. */
+function thumbStyle(p) {
+  const th = p.thumbs;
+  if (!th) return "";
+  const w = 124, k = w / th.w, h = th.h * k;
+  const i = Math.floor(th.count / 3);
+  return `background-image:url('/media/${encodeURIComponent(p.id)}/thumbs?t=${encodeURIComponent(R.token)}');`
+    + `background-size:${th.cols * w}px ${th.rows * h}px;`
+    + `background-position:-${(i % th.cols) * w}px -${Math.floor(i / th.cols) * h + (70 - h) / -2}px;`;
+}
+
 function card(p) {
   const st = p.status || {};
   const busy = ["queued","running"].includes(st.state);
   const d = document.createElement("div");
-  d.className = "card";
+  d.className = "card" + (p.result && !busy ? " openable" : "");
   const created = p.created ? new Date(p.created * 1000).toLocaleDateString("ru-RU", {day:"numeric", month:"long"}) : "";
   let line = "";
   if (busy) {
@@ -242,11 +253,13 @@ function card(p) {
     if (p.result) acts.push(`<button data-a="detect" title="Применить новые настройки пауз (решения по правкам сохранятся)">Найти заново</button>`);
     acts.push(`<button class="danger" data-a="delete" title="Удалить проект (видео не трогается)">Удалить</button>`);
   }
-  d.innerHTML = `<div><div class="name">${esc(p.name)}</div>
-      <div class="meta">${hms(p.duration)} · добавлен ${esc(created)} · ${esc(STEP[st.state] || "")}</div></div>
+  d.innerHTML = `<div class="thumb" style="${thumbStyle(p)}"></div>
+    <div><div class="name">${esc(p.name)}</div>
+      <div class="meta">${hms(p.duration)} · добавлен ${esc(created)}${st.state === "done" ? "" : " · " + esc(STEP[st.state] || "")}</div></div>
     <div class="acts">${acts.join("")}</div>
     ${line ? `<div class="line">${line}</div>` : ""}`;
-  d.querySelectorAll("[data-a]").forEach(b => b.onclick = () => action(p, b.dataset.a));
+  d.querySelectorAll("[data-a]").forEach(b => b.onclick = ev => { ev.stopPropagation(); action(p, b.dataset.a); });
+  if (p.result && !busy) d.onclick = () => action(p, "open");
   return d;
 }
 
@@ -354,7 +367,10 @@ $("#form").onsubmit = async ev => {
   } catch (e) { alert(e.message); }
 };
 
-refresh();
+refresh().then(async () => {
+  // the editor sends here for the AI settings
+  if (new URLSearchParams(location.search).has("settings")) { fillSettings(await api("/api/settings")); dlg.showModal(); }
+});
 </script>
 </body>
 </html>

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retake</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%237b93ff'/%3E%3Cpath d='M11 8v16l13-8z' fill='%230e1120'/%3E%3C/svg%3E">
+<!--RETAKE-->
+<link rel="stylesheet" href="/ui/theme.css">
+<link rel="stylesheet" href="/ui/editor.css">
+</head>
+<body data-view="source">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 5v14M19 5.5v13L9 12z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M18 5v14M5 5.5v13L15 12z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-stepb" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-stepf" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M8 5L4 9l4 4M4 9h10a5.5 5.5 0 0 1 0 11h-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M16 5l4 4-4 4M20 9H10a5.5 5.5 0 0 0 0 11h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-blade" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6.5" r="2.6"/><circle cx="6" cy="17.5" r="2.6"/><path d="M8.2 8.2L20 19M8.2 15.8L20 5"/></g></symbol>
+    <symbol id="i-magnet" viewBox="0 0 24 24"><path d="M5 4v8a7 7 0 0 0 14 0V4h-4.5v8a2.5 2.5 0 0 1-5 0V4zM5 8.5h4.5M14.5 8.5H19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 12h16M7.5 8.5L4 12l3.5 3.5M16.5 8.5L20 12l-3.5 3.5M4 4v0M4 4v3M20 4v3M4 17v3M20 17v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-jump" viewBox="0 0 24 24"><path d="M3 15c2-6 7-8 11-5l2 2M16 7v5h-5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M14 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></g></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 6.1L20 11l-6.1 1.9L12 19l-1.9-6.1L4 11l6.1-1.9z" fill="currentColor"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M8 5.5v13M16 5.5v13M3.5 12h17"/></g></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 10v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div id="loading">Загрузка…</div>
+
+<header id="top">
+  <a class="back" href="/" title="К списку уроков"><svg class="i"><use href="#i-back"/></svg>Уроки</a>
+  <h1 id="title"></h1>
+  <div id="stats"></div>
+  <span id="saved"></span>
+  <span class="sp"></span>
+  <div id="jobPill" hidden><span id="jobText"></span><div id="jobBar" class="bar"><i></i></div><button id="jobCancel" class="link">Отменить</button></div>
+  <button id="btnHelp" class="icon-text" title="Как работать и все клавиши (?)">Клавиши</button>
+  <div class="menu-wrap">
+    <button id="btnExport" class="primary" title="Собрать готовое видео (⌘E)">Экспорт<svg class="i"><use href="#i-chev"/></svg></button>
+    <div id="exportMenu" class="popover" hidden>
+      <div id="exportInfo" class="info"></div>
+      <button id="btnMp4" class="row"><b>Видео MP4</b><span>Готовый файл: можно сразу в iMovie или на YouTube</span></button>
+      <button id="btnXml" class="row"><b>Таймлайн FCPXML</b><span>Для Final Cut Pro и DaVinci Resolve: со всеми стыками</span></button>
+      <hr>
+      <button id="btnReset" class="row small">Вернуть всё как было</button>
+      <button id="btnReport" class="row small">Сообщить о проблеме</button>
+    </div>
+  </div>
+</header>
+
+<main id="work">
+  <section id="panelText" class="panel">
+    <div class="panel-head">
+      <h2>Текст</h2>
+      <label class="search"><svg class="i"><use href="#i-search"/></svg><input id="textSearch" type="text" placeholder="Найти в уроке" autocomplete="off" spellcheck="false"><span id="textCount"></span></label>
+    </div>
+    <div id="textBody" title=""></div>
+    <div class="panel-foot">Выделите текст, чтобы вырезать этот кусок</div>
+  </section>
+  <div class="split v" data-split="l"></div>
+
+  <section id="viewer">
+    <div id="vWrap">
+      <video id="vA"></video>
+      <video id="vB"></video>
+      <div id="vBadge" style="display:none"></div>
+      <div id="vFlash"></div>
+      <div id="vError" style="display:none"></div>
+    </div>
+    <div id="transport">
+      <div class="tc"><div id="tcMain">0:00.0</div><div id="tcSub"></div></div>
+      <div class="pad">
+        <button id="btnPrevEdit" class="tool" title="Предыдущий стык (↑)"><svg class="i"><use href="#i-prev"/></svg></button>
+        <button id="btnStepB" class="tool" title="Кадр назад (←)"><svg class="i"><use href="#i-stepb"/></svg></button>
+        <button id="btnPlay" class="play" title="Пуск (пробел)"><svg class="i"><use href="#i-play"/></svg></button>
+        <button id="btnStepF" class="tool" title="Кадр вперёд (→)"><svg class="i"><use href="#i-stepf"/></svg></button>
+        <button id="btnNextEdit" class="tool" title="Следующий стык (↓)"><svg class="i"><use href="#i-next"/></svg></button>
+      </div>
+      <div class="right">
+        <button id="btnSkip" class="toggle" title="Пропускать при просмотре всё, что будет вырезано"><svg class="i"><use href="#i-jump"/></svg><span>Без вырезанного</span></button>
+        <button id="rateBtn" class="tool wide" title="Скорость просмотра">1×</button>
+        <label class="vol" title="Громкость"><svg class="i"><use href="#i-volume"/></svg><input id="volume" type="range" min="0" max="1" step="0.01" value="1"></label>
+      </div>
+    </div>
+  </section>
+  <div class="split v" data-split="r"></div>
+
+  <section id="panelAssist" class="panel">
+    <div id="sideTabs">
+      <button data-side="assist" class="active">Подсказки</button><button data-side="text">Текст</button>
+    </div>
+    <div class="panel-head">
+      <h2>Подсказки</h2>
+      <div id="assistProgress"></div>
+    </div>
+    <div id="assistTabs"></div>
+    <div id="assistBulk"></div>
+    <div id="assistScroll">
+    <div id="welcome" style="display:none">
+      <b>С чего начать</b>
+      <ol>
+        <li><kbd>Tab</kbd> открывает следующую подсказку и включает это место</li>
+        <li><kbd>X</kbd> — вырезать или оставить, <kbd>Enter</kbd> — согласиться и дальше</li>
+        <li>Что-то упущено? Выделите кусок на дорожке или текст слева и нажмите <kbd>⌫</kbd></li>
+      </ol>
+      <div class="acts"><button data-a="ok" class="primary">Понятно</button><button data-a="keys">Все клавиши</button></div>
+    </div>
+    <div id="assistList"></div>
+    </div>
+    <div id="aiBox">
+      <button id="btnAi" class="ai"></button>
+      <div id="aiInfo"></div>
+    </div>
+  </section>
+</main>
+
+<div class="split h" data-split="t"></div>
+
+<section id="timeline">
+  <div id="tlBar">
+    <div class="group">
+      <button id="btnUndo" class="tool" disabled title="Отменить (⌘Z)"><svg class="i"><use href="#i-undo"/></svg></button>
+      <button id="btnRedo" class="tool" disabled title="Повторить (⇧⌘Z)"><svg class="i"><use href="#i-redo"/></svg></button>
+    </div>
+    <div class="group">
+      <button id="btnBlade" class="tool" title="Разрезать в позиции курсора (S или ⌘B)"><svg class="i"><use href="#i-blade"/></svg></button>
+      <button id="btnIn" class="tool label" title="Начало выделения (I)">I</button>
+      <button id="btnOut" class="tool label" title="Конец выделения (O)">O</button>
+      <button id="btnSnap" class="tool" title="Прилипание к паузам между словами (N)"><svg class="i"><use href="#i-magnet"/></svg></button>
+    </div>
+    <div id="selBar"></div>
+    <span class="sp"></span>
+    <div id="viewSeg" class="seg big" role="group" aria-label="Что показывать на дорожках">
+      <button data-mode="source" class="active" title="Вся запись, вырезанное затенено (R)">Исходник</button><button data-mode="result" title="Как будет: вырезанного нет (R)">Результат</button>
+    </div>
+    <span class="sp"></span>
+    <div class="group zoom">
+      <button id="btnZoomOut" class="tool" title="Отдалить (⌘−)"><svg class="i"><use href="#i-minus"/></svg></button>
+      <input id="zoom" type="range" min="0" max="1000" value="0" title="Масштаб">
+      <button id="btnZoomIn" class="tool" title="Приблизить (⌘+)"><svg class="i"><use href="#i-plus"/></svg></button>
+      <button id="btnFit" class="tool" title="Весь урок (⇧Z)"><svg class="i"><use href="#i-fit"/></svg></button>
+    </div>
+  </div>
+  <div id="ovRow"><div class="ov-gap"></div><div id="ovBox"><canvas id="ovCanvas"></canvas><div id="ovHead"></div></div></div>
+  <div id="tlBody">
+    <div id="hoverThumb" style="display:none"></div>
+    <div id="tlHeads">
+      <div data-lane="ai" title="Подсказки: сплошная — будет вырезано, пунктир — останется. Внизу — паузы"><svg class="i"><use href="#i-spark"/></svg></div>
+      <div data-lane="text" title="Текст"><svg class="i"><use href="#i-text"/></svg></div>
+      <div data-lane="video" title="Видео"><svg class="i"><use href="#i-film"/></svg></div>
+      <div data-lane="audio" title="Звук"><svg class="i"><use href="#i-wave"/></svg></div>
+    </div>
+    <div id="tlStage">
+      <canvas id="tlCanvas"></canvas>
+      <div id="hoverLine" style="display:none"><span></span></div>
+      <div id="playhead"><i></i></div>
+    </div>
+  </div>
+  <div id="tlHint"></div>
+</section>
+
+<div id="toasts"></div>
+
+<dialog id="helpDlg">
+  <div class="help">
+    <header><h3>Как работать</h3><button id="helpClose" class="tool" title="Закрыть (Esc)">✕</button></header>
+    <p class="lead">Retake нашёл места, которые можно вырезать. Вы слушаете и решаете. Исходный файл не меняется, отменить можно всё.</p>
+    <div class="cols">
+      <section>
+        <h4>Проверка подсказок</h4>
+        <dl>
+          <dt><kbd>Tab</kbd> <kbd>⇧Tab</kbd></dt><dd>следующая / предыдущая подсказка</dd>
+          <dt><kbd>X</kbd></dt><dd>вырезать или оставить</dd>
+          <dt><kbd>Enter</kbd></dt><dd>согласиться и перейти дальше</dd>
+          <dt><kbd>P</kbd></dt><dd>послушать стык: как будет</dd>
+          <dt><kbd>⇧P</kbd></dt><dd>послушать, что вырезаем</dd>
+        </dl>
+        <h4>Монтаж</h4>
+        <dl>
+          <dt>тянуть по дорожке</dt><dd>выделить кусок</dd>
+          <dt>тянуть край правки</dt><dd>сдвинуть границу (<kbd>⌥</kbd> — без прилипания)</dd>
+          <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd>начало и конец выделения</dd>
+          <dt><kbd>⌫</kbd></dt><dd>вырезать выделенное</dd>
+          <dt><kbd>⇧⌫</kbd></dt><dd>вернуть вырезанное в выделении</dd>
+          <dt><kbd>S</kbd> <kbd>⌘B</kbd></dt><dd>разрезать в позиции курсора</dd>
+          <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>начало / конец правки — на курсор</dd>
+          <dt><kbd>N</kbd></dt><dd>прилипание вкл/выкл</dd>
+          <dt><kbd>⌘Z</kbd> <kbd>⇧⌘Z</kbd></dt><dd>отменить / повторить</dd>
+        </dl>
+      </section>
+      <section>
+        <h4>Просмотр</h4>
+        <dl>
+          <dt><kbd>Пробел</kbd></dt><dd>пуск / пауза</dd>
+          <dt><kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd></dt><dd>назад / стоп / вперёд, повторное нажатие быстрее</dd>
+          <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>на кадр</dd>
+          <dt><kbd>⇧←</kbd> <kbd>⇧→</kbd></dt><dd>на секунду</dd>
+          <dt><kbd>⌥←</kbd> <kbd>⌥→</kbd></dt><dd>на слово</dd>
+          <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>к предыдущему / следующему стыку</dd>
+          <dt><kbd>/</kbd></dt><dd>проиграть выделенное</dd>
+          <dt><kbd>R</kbd></dt><dd>исходник / результат</dd>
+        </dl>
+        <h4>Масштаб</h4>
+        <dl>
+          <dt>щипок, <kbd>⌘</kbd> + колесо</dt><dd>приблизить / отдалить</dd>
+          <dt><kbd>Z</kbd></dt><dd>приблизить выбранное</dd>
+          <dt><kbd>⇧Z</kbd></dt><dd>весь урок</dd>
+          <dt><kbd>⌘F</kbd></dt><dd>поиск по тексту</dd>
+        </dl>
+      </section>
+    </div>
+  </div>
+</dialog>
+
+<script type="module" src="/ui/js/editor.js"></script>
+</body>
+</html>

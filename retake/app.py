@@ -40,6 +40,7 @@ IS_WSL = "microsoft" in platform.release().lower()
 JOBS: projects.Jobs | None = None
 PORT = 0
 DESKTOP = False  # set by desktop.py: file dialogs and drag-and-drop come from the native window
+STATIC_TYPES = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8"}
 
 
 # ---------------------------------------------------------------- OS helpers
@@ -117,7 +118,7 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(raw or b"{}")
 
     def page(self, name: str, project: str | None = None):
-        html = (UI / name).read_text() if name != "review" else (HERE / "review_template.html").read_text()
+        html = (UI / name).read_text(encoding="utf-8")
         boot = json.dumps({"token": TOKEN, "project": project})
         html = html.replace("<!--RETAKE-->", f"<script>window.RETAKE = {boot};</script>", 1)
         # pywebview injects its bridge to Python with eval(): allowed in the app window only
@@ -146,9 +147,14 @@ class Handler(BaseHTTPRequestHandler):
                 if path == "/":
                     return self.page("index.html")
                 if r := re.fullmatch(r"/p/([\w-]+)", path):
-                    return self.page("review", r[1]) if projects.get(r[1]) else self.error("нет проекта", 404)
+                    return self.page("editor.html", r[1]) if projects.get(r[1]) else self.error("нет проекта", 404)
+                if r := re.fullmatch(r"/ui/([\w./-]+)", path):
+                    return self.static(r[1])
                 if r := re.fullmatch(r"/media/([\w-]+)", path):
                     return self.media(r[1])
+                if r := re.fullmatch(r"/media/([\w-]+)/thumbs", path):
+                    f = need(r[1]).dir / "thumbs.jpg"
+                    return self._send(200, f.read_bytes(), "image/jpeg") if f.is_file() else self.error("нет кадров", 404)
                 if path == "/api/state":
                     return self.json(state())
                 if path == "/api/settings":
@@ -158,6 +164,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.json(p.summary())
                 if r := re.fullmatch(r"/api/projects/([\w-]+)/review", path):
                     return self.json(review_data(need(r[1])))
+                if r := re.fullmatch(r"/api/projects/([\w-]+)/peaks", path):
+                    return self._send(200, need(r[1]).peaks(), "application/octet-stream")
+                if r := re.fullmatch(r"/api/projects/([\w-]+)/thumbs", path):
+                    return self.json(thumbs_state(need(r[1])))
                 return self.error("not found", 404)
             if m == "POST":
                 return self.post(path, self.body())
@@ -178,10 +188,19 @@ class Handler(BaseHTTPRequestHandler):
             return self.error("not found", 404)
         except NotFound as e:
             return self.error(str(e), 404)
-        except (ValueError, KeyError, TypeError, RuntimeError, llm_mod.LLMError) as e:
-            return self.error(str(e) or e.__class__.__name__)
         except (BrokenPipeError, ConnectionResetError):
             pass
+        except (ValueError, KeyError, TypeError, RuntimeError, OSError, llm_mod.LLMError) as e:
+            return self.error(str(e) or e.__class__.__name__)
+
+    def static(self, rel: str):
+        """The editor's scripts and styles."""
+        root = UI.resolve()
+        f = (root / rel).resolve()
+        ctype = STATIC_TYPES.get(f.suffix)
+        if not ctype or not f.is_relative_to(root) or not f.is_file():
+            return self.error("not found", 404)
+        return self._send(200, f.read_bytes(), ctype)
 
     def post(self, path: str, b: dict):
         if path == "/api/model/download":
@@ -367,18 +386,59 @@ def review_data(p: projects.Project) -> dict:
     for e in edits:
         e["default_on"] = defaults.get(e["id"], True)
     s = config.load()
+    try:
+        video = p.video_info()
+    except (OSError, ValueError, KeyError, IndexError, subprocess.CalledProcessError):
+        video = None  # the file was moved: the page says so and still shows the text
     return {
         "project": p.summary(),
         "video": f"/media/{p.id}?t={TOKEN}",
+        "thumbs_url": f"/media/{p.id}/thumbs?t={TOKEN}",
+        "fps": video["fps"] if video else 25.0,
+        "size": [video["w"], video["h"]] if video else None,
         "source": doc["source"],
         "range": doc["range"],
         "words": doc["words"],
         "phrases": doc["phrases"],
         "edits": edits,
+        "splits": p.decisions().get("splits", []),
         "llm": doc.get("llm"),
         "llm_ready": llm_ready(s),
         "llm_model": s["llm"]["model"],
     }
+
+
+_thumb_jobs: dict[str, str] = {}  # project id -> "working" or "failed"
+_thumb_lock = threading.Lock()
+
+
+def thumbs_state(p: projects.Project) -> dict:
+    """The filmstrip is made on first request, beside the job queue: it takes seconds and also has
+    to appear for lessons processed earlier."""
+    meta = p.thumbs()
+    if meta:
+        return {"state": "ready", **meta}
+    with _thumb_lock:
+        state = _thumb_jobs.get(p.id)
+        if state:
+            return {"state": state}
+        _thumb_jobs[p.id] = "working"
+
+    def run():
+        try:
+            p.make_thumbs()
+            state = None
+        except Exception as e:  # noqa: BLE001 -- the timeline works without a filmstrip
+            print(f"filmstrip failed: {e} {getattr(e, 'stderr', '')}", file=sys.stderr)
+            state = "failed"
+        with _thumb_lock:
+            if state:
+                _thumb_jobs[p.id] = state
+            else:
+                _thumb_jobs.pop(p.id, None)
+
+    threading.Thread(target=run, daemon=True).start()
+    return {"state": "working"}
 
 
 def save_settings(b: dict) -> dict:
