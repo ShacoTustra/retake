@@ -36,8 +36,14 @@ CHECK = """
   r.readyState = v.readyState;
   r.error = v.error ? v.error.message || String(v.error.code) : null;
   r.duration = v.duration;
+  for (let i = 0; i < 100 && !a.model.peaks; i++) await wait(100);  // made on first request here
   r.waveform = !!a.model.peaks;
   r.frameStep = 1 / a.model.fps;
+  const nav = performance.getEntriesByType('navigation')[0];
+  r.pageLoadMs = nav ? Math.round(nav.loadEventEnd) : null;
+  const st0 = performance.now();
+  await fetch('/api/state', { headers: { 'X-Retake-Token': window.RETAKE.token } });
+  r.stateMs = Math.round(performance.now() - st0);
   if (v.readyState >= 2) {
     r.seekMs = [];
     for (const t of [15, 3, 12, 6]) {
@@ -60,6 +66,10 @@ CHECK = """
     r.secondVideoTookOver = P.cur !== first;
     r.stillTwoVideos = P.dual;
     r.playing = !P.paused;
+    // is there sound, or only a picture? both elements together, either may have played
+    const media = [P.cur, P.alt];
+    r.audioTracks = P.cur.audioTracks ? P.cur.audioTracks.length : null;
+    r.audioBytesDecoded = media.reduce((n, m) => n + (m.webkitAudioDecodedByteCount || 0), 0);
     P.pause();
   }
   window.__check = r;

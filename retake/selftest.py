@@ -144,20 +144,29 @@ def main(argv: list[str]) -> int:
         return f"{used}: {info['fps']} fps, {info['duration']:.1f} s -> {render.probe(out)['video_duration']:.1f} s"
 
     def server():
+        t = [time.time()]
         import app
+        t.append(time.time())
         srv, url = app.start_server(port=0)
+        t.append(time.time())
         local = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # never via an HTTP proxy
         try:
-            html = local.open(url, timeout=10).read().decode()
-            assert "window.RETAKE" in html
+            with local.open(url, timeout=10) as r:
+                assert "window.RETAKE" in r.read().decode()
+            t.append(time.time())
             req = urllib.request.Request(url + "api/state", headers={"X-Retake-Token": app.TOKEN})
-            st = json.loads(local.open(req, timeout=10).read())
+            with local.open(req, timeout=10) as r:
+                st = json.loads(r.read())
             assert st["version"] == runtime.VERSION
+            t.append(time.time())
             for f in ("theme.css", "editor.css", "js/editor.js", "js/model.js", "js/player.js", "js/timeline.js",
                       "js/panels.js"):
-                assert local.open(url + "ui/" + f, timeout=10).status == 200, f"{f} is missing from the build"
+                with local.open(url + "ui/" + f, timeout=10) as r:
+                    assert r.status == 200 and r.read(), f"{f} is missing from the build"
+            t.append(time.time())
             assert (app.UI / "editor.html").is_file(), "editor.html is missing from the build"
-            return f"{url} ok, model: {st['model']}"
+            steps = "import, start, page, state, files: " + ", ".join(f"{b - a:.1f}" for a, b in zip(t, t[1:]))
+            return f"{url} ok ({steps} s), model: {st['model']}"
         finally:
             srv.shutdown()
 
