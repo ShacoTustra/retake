@@ -66,10 +66,24 @@ CHECK = """
     r.secondVideoTookOver = P.cur !== first;
     r.stillTwoVideos = P.dual;
     r.playing = !P.paused;
-    // is there sound, or only a picture? both elements together, either may have played
-    const media = [P.cur, P.alt];
     r.audioTracks = P.cur.audioTracks ? P.cur.audioTracks.length : null;
-    r.audioBytesDecoded = media.reduce((n, m) => n + (m.webkitAudioDecodedByteCount || 0), 0);
+    // is there sound, or only a picture? Measure the signal; the AAC file is the control
+    try {
+      const ctx = new AudioContext();
+      await ctx.resume().catch(() => {});
+      const an = ctx.createAnalyser();
+      ctx.createMediaElementSource(P.cur).connect(an);
+      an.connect(ctx.destination);
+      const buf = new Float32Array(an.fftSize);
+      let peak = 0;
+      for (let i = 0; i < 40; i++) {
+        an.getFloatTimeDomainData(buf);
+        for (const x of buf) peak = Math.max(peak, Math.abs(x));
+        await wait(50);
+      }
+      r.audioContext = ctx.state;
+      r.audioPeak = +peak.toFixed(4);
+    } catch (e) { r.audioError = String(e); }
     P.pause();
   }
   window.__check = r;

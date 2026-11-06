@@ -22,6 +22,7 @@ import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from socketserver import TCPServer
 from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -313,6 +314,16 @@ class Handler(BaseHTTPRequestHandler):
     do_GET = do_HEAD = do_POST = do_PUT = do_DELETE = route
 
 
+class Server(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def server_bind(self):
+        # HTTPServer.server_bind looks the host up with getfqdn only to remember a name nobody here uses.
+        # Without working DNS that takes half a minute on a Mac, at every launch.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 class NotFound(Exception):
     pass
 
@@ -496,8 +507,7 @@ def start_server(port: int = 8765) -> tuple[ThreadingHTTPServer, str]:
     recover_jobs()
     JOBS = projects.Jobs()
     PORT = free_port(port)
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    srv.daemon_threads = True
+    srv = Server(("127.0.0.1", PORT), Handler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv, f"http://127.0.0.1:{PORT}/"
 
