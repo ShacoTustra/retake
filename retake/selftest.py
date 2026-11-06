@@ -129,6 +129,20 @@ def main(argv: list[str]) -> int:
         assert abs(d["video"] - d["audio"]) < 0.1, f"audio/video length differ: {d}"
         return f"{used}: {info['duration']:.1f} s -> {d['video']:.1f} s"
 
+    def uneven():
+        """Frames not evenly spaced, fragments, timescale 30000: what a browser recording looks like."""
+        src, out = work / "vfr.mp4", work / "vfr-cut.mp4"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=640x360:rate=30:duration=9",
+                        "-f", "lavfi", "-i", "sine=f=440:duration=9",
+                        "-vf", r"select='not(mod(n\,3))+gt(t\,4)',format=yuv420p", "-fps_mode", "vfr", "-c:v", "libx264",
+                        "-video_track_timescale", "30000", "-c:a", "aac", "-movflags", "frag_keyframe+empty_moov", str(src)],
+                       check=True)
+        info = render.probe(src)
+        assert info["vfr"], f"not seen as variable: {info}"
+        keep = render.keep_segments([{"start": 2, "end": 5, "on": True}], 0, 9, info["fps"])
+        used = render.render_mp4(src, keep, info["fps"], out, render.default_encoder(), 9)  # checks the lengths too
+        return f"{used}: {info['fps']} fps, {info['duration']:.1f} s -> {render.probe(out)['video_duration']:.1f} s"
+
     def server():
         import app
         srv, url = app.start_server(port=0)
@@ -139,6 +153,10 @@ def main(argv: list[str]) -> int:
             req = urllib.request.Request(url + "api/state", headers={"X-Retake-Token": app.TOKEN})
             st = json.loads(local.open(req, timeout=10).read())
             assert st["version"] == runtime.VERSION
+            for f in ("theme.css", "editor.css", "js/editor.js", "js/model.js", "js/player.js", "js/timeline.js",
+                      "js/panels.js"):
+                assert local.open(url + "ui/" + f, timeout=10).status == 200, f"{f} is missing from the build"
+            assert (app.UI / "editor.html").is_file(), "editor.html is missing from the build"
             return f"{url} ok, model: {st['model']}"
         finally:
             srv.shutdown()
@@ -164,6 +182,7 @@ def main(argv: list[str]) -> int:
         step("detection", find)
     if "doc" in ctx:
         step("render", cut)
+    step("render of a variable frame rate", uneven)
     step("local server", server)
     step("window library", window_lib)
 
