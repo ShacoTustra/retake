@@ -320,7 +320,11 @@ window.retakeDropped = paths => {
   if (!paths.length) $("#addMsg").textContent = "Не удалось узнать путь к файлу. Нажмите «Добавить запись урока…».";
   paths.forEach(addPath);
 };
-document.addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("dragging"); });
+// Both events must claim the drag. WebKit decides by the last one, and a dragenter fires each time the element
+// under the pointer changes, as it does when the list refreshes. Unclaimed, the window opens the video instead.
+for (const type of ["dragenter", "dragover"]) {
+  document.addEventListener(type, e => { e.preventDefault(); document.body.classList.add("dragging"); });
+}
 document.addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("dragging"); });
 document.addEventListener("drop", e => { e.preventDefault(); document.body.classList.remove("dragging");
   if (!S?.desktop) $("#addMsg").textContent = "Браузер не сообщает путь к перетащенному файлу — нажмите «Добавить запись урока…»."; });

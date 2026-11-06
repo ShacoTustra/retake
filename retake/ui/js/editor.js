@@ -600,7 +600,8 @@ class App {
       ev.target.closest?.("button")?.blur();
     });
     $("#exportMenu").onclick = ev => ev.stopPropagation();
-    // the page must not turn into the dropped file
+    // the page must not turn into the dropped file: WebKit decides by whichever of these came last
+    document.addEventListener("dragenter", e => e.preventDefault());
     document.addEventListener("dragover", e => e.preventDefault());
     document.addEventListener("drop", e => e.preventDefault());
   }

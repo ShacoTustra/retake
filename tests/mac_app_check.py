@@ -406,15 +406,20 @@ def finder_item(path: Path):
 
 def step_drag(a: App, path: Path) -> None:
     ensure_home(a)
-    item, (fx, fy, fw, fh) = finder_item(path)
-    x, y, w, h = rect(windows(a.pid)[0])
-    spots = [(x + w * kx, y + h * ky) for kx in (0.92, 0.5, 0.08) for ky in (0.85, 0.5, 0.15)]
-    target = next((s for s in spots if not (fx <= s[0] <= fx + fw and fy <= s[1] <= fy + fh)), None)
-    if target is None:
-        raise RuntimeError("Finder covers the app window")
-    a.shot("before-drag")
-    drag(item, target)
-    a.wait(f"the dragged lesson {nfc(path.name)}", lambda: nfc(path) in a.sources(), 15)
+    for attempt in range(1, 4):  # repeated: the list refreshes under the pointer at its own moments
+        item, (fx, fy, fw, fh) = finder_item(path)
+        x, y, w, h = rect(windows(a.pid)[0])
+        spots = [(x + w * kx, y + h * ky) for kx in (0.92, 0.5, 0.08) for ky in (0.85, 0.5, 0.15)]
+        target = next((s for s in spots if not (fx <= s[0] <= fx + fw and fy <= s[1] <= fy + fh)), None)
+        if target is None:
+            raise RuntimeError("Finder covers the app window")
+        if attempt == 1:
+            a.shot("before-drag")
+        drag(item, target)
+        a.wait(f"the dragged lesson {nfc(path.name)}", lambda: nfc(path) in a.sources(), 15)
+        time.sleep(1.5)
+        if find(a.pid, "Добавить запись урока", timeout=3) is None:
+            raise RuntimeError(f"drag {attempt}: the window opened the file instead of keeping the page")
     a.shot("after-drag")
 
 
