@@ -220,6 +220,8 @@ class App:
         el = find(self.pid, text, role, timeout)
         if el is None:
             raise RuntimeError(f"nothing to press: {text}")
+        HIServices.AXUIElementPerformAction(el, "AXScrollToVisible")  # a card further down the list
+        time.sleep(0.4)
         click(*center(el))
 
     def wait(self, what: str, fn, timeout: float = 20):
