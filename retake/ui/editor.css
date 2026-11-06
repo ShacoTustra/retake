@@ -228,7 +228,7 @@ input[type=range] { accent-color: var(--ink-2); height: 14px; }
 #tlHint b { color: var(--ink-2); font-weight: 600; margin-right: 0; }
 
 /* ---------------------------------------------------------------- toasts, help */
-#toasts { position: fixed; left: 50%; bottom: calc(var(--tl-h) + 14px); transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; z-index: 40; pointer-events: none; }
+#toasts { position: fixed; left: 50%; bottom: calc(var(--tl-h) + 66px); transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; z-index: 40; pointer-events: none; }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; background: #2c2f36; border: 1px solid var(--line-2); border-radius: 9px; padding: 6px 12px; box-shadow: 0 10px 28px rgba(0,0,0,.45); max-width: 60vw; }
 .toast.err { border-color: var(--err); }
 .toast.ok { border-color: var(--ok); }

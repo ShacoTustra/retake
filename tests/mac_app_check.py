@@ -338,6 +338,8 @@ def step_report(a: App, project: projects.Project) -> None:
     a.shot("report-question")
     key("return")  # the page's confirm(): a native alert in the app window
     a.wait("the report in Downloads", lambda: set(downloads.glob("Retake-*.zip")) - before, 20)
+    time.sleep(3)  # Finder comes up with the file
+    a.shot("report-done")
 
 
 def step_back_home(a: App, project: projects.Project) -> None:
@@ -347,7 +349,24 @@ def step_back_home(a: App, project: projects.Project) -> None:
     time.sleep(0.5)
 
 
+def step_open_again(a: App, project: projects.Project) -> None:
+    a.activate()
+    a.press("Открыть")
+    a.wait("the editor", lambda: find(a.pid, "Экспорт", timeout=1), 30)
+    time.sleep(1)
+
+
+def ensure_home(a: App) -> None:
+    """An earlier failure must not hide whether importing works: start again on the lesson list."""
+    if find(a.pid, "Добавить запись урока", timeout=2) is None:
+        print("(not on the lesson list: restarting the app)", flush=True)
+        step_quit(a, None)
+        a.start()
+        time.sleep(2)
+
+
 def step_button(a: App, project: projects.Project) -> None:
+    ensure_home(a)
     a.activate()
     count = len(windows(a.pid))
     a.press("Добавить запись урока")
@@ -384,6 +403,7 @@ def finder_item(path: Path):
 
 
 def step_drag(a: App, path: Path) -> None:
+    ensure_home(a)
     item, (fx, fy, fw, fh) = finder_item(path)
     x, y, w, h = rect(windows(a.pid)[0])
     spots = [(x + w * kx, y + h * ky) for kx in (0.92, 0.5, 0.08) for ky in (0.85, 0.5, 0.15)]
@@ -440,8 +460,9 @@ def main() -> int:
     time.sleep(2)
     a.shot("home")
 
-    steps = [("open the editor", step_open_editor), ("keys in the editor", step_keys), ("export", step_export),
-             ("problem report", step_report), ("back to the lessons", step_back_home),
+    steps = [("open the editor", step_open_editor), ("the link back to the lessons", step_back_home),
+             ("open it again", step_open_again), ("keys in the editor", step_keys), ("export", step_export),
+             ("problem report", step_report), ("back after the report", step_back_home),
              ("add by button and file dialog", step_button)]
     steps += [(f"drag from Finder: {nfc(p.name)}", lambda a, _, p=p: step_drag(a, p)) for p in DRAGGED]
     steps += [("quit", step_quit), ("second start keeps settings", step_second_start)]
