@@ -1,0 +1,35 @@
+# Runs from the repository as on a new Mac: setup_mac.sh, tests, self-test, the real window.
+# Fast feedback for the path people use before there is a packaged build.
+name: Test on macOS
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+jobs:
+  mac:
+    runs-on: macos-15   # Apple Silicon
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up as on a new Mac
+        env:
+          SKIP_SELFTEST: "1"
+        run: ./setup_mac.sh
+
+      - name: Tests
+        run: |
+          node --test tests/*.mjs
+          .venv/bin/python -m unittest discover tests
+
+      - name: Self-test
+        run: .venv/bin/python retake/desktop.py --selftest
+
+      - name: The real window opens
+        run: .venv/bin/python retake/desktop.py --smoke
+
+      - name: The editor in a real window
+        run: .venv/bin/python tests/mac_window_check.py

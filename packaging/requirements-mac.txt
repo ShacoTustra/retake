@@ -1,6 +1,6 @@
-# Python packages bundled into Retake.app (Apple Silicon). Installed by packaging/build_mac.sh, which
-# also installs, separately:
-#   mlx==0.32.4, mlx-metal==0.32.4  -- from their macOS 14 wheels, so the app runs on macOS 14+
+# Python packages Retake needs on an Apple Silicon Mac. Used by setup_mac.sh (running from the repository)
+# and packaging/build_mac.sh (Retake.app). Both also install, separately:
+#   mlx==0.32.4, mlx-metal==0.32.4  -- the build takes their macOS 14 wheels, so the app runs on macOS 14+
 #   mlx-whisper==0.4.3 (--no-deps)  -- it lists torch, but torch is only used to convert weights
 numba==0.68.1
 llvmlite==0.50.0
@@ -15,4 +15,3 @@ huggingface-hub==2.4.0
 rapidfuzz==3.14.6
 truststore==0.10.5
 pywebview==6.2.1
-pyinstaller==6.22.3

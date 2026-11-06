@@ -33,24 +33,11 @@ rm -rf "$BUILD/wheels"
 python -m pip download -q --only-binary=:all: --no-deps --platform macosx_14_0_arm64 \
   --python-version "$PYV" -d "$BUILD/wheels" mlx==0.32.4 mlx-metal==0.32.4
 python -m pip install -q --no-deps "$BUILD"/wheels/*.whl
-python -m pip install -q -r packaging/requirements-mac.txt
+python -m pip install -q -r packaging/requirements-mac.txt pyinstaller==6.22.3
 python -m pip install -q --no-deps mlx-whisper==0.4.3   # its torch dependency is only for weight conversion
 
 echo "== ffmpeg / ffprobe (static arm64 build, checksums pinned)"
-FF_BASE=https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2
-fetch() {
-  local name=$1 sha=$2
-  if [ -x "packaging/bin/$name" ] && [ -f "packaging/bin/.$name.$sha" ]; then return; fi
-  curl -fL --retry 3 -o "$BUILD/$name.zip" "$FF_BASE/$name.zip"
-  echo "$sha  $BUILD/$name.zip" | shasum -a 256 -c -
-  unzip -o -q "$BUILD/$name.zip" -d packaging/bin
-  chmod +x "packaging/bin/$name"
-  xattr -c "packaging/bin/$name" 2>/dev/null || true
-  touch "packaging/bin/.$name.$sha"
-}
-fetch ffmpeg c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924
-fetch ffprobe fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6
-packaging/bin/ffmpeg -hide_banner -version | head -1
+packaging/fetch_ffmpeg.sh
 
 echo "== Icon"
 ICONSET="$BUILD/Retake.iconset"

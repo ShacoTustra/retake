@@ -16,15 +16,17 @@ LOG_MAX = 5_000_000
 
 
 def resource_dir() -> Path:
-    """Folder with review_template.html, ui/ and bin/ (inside the .app when frozen)."""
+    """Folder with ui/ and bin/ (inside the .app when frozen)."""
     return Path(getattr(sys, "_MEIPASS")) if FROZEN else Path(__file__).resolve().parent
 
 
 def setup_tools() -> None:
     """Put the bundled ffmpeg/ffprobe first on PATH: all code (and mlx-whisper) calls them by name."""
-    b = resource_dir() / "bin"
-    if b.is_dir():
-        os.environ["PATH"] = str(b) + os.pathsep + os.environ.get("PATH", "")
+    # running from the repository: setup_mac.sh puts them in packaging/bin
+    dirs = [resource_dir() / "bin"] if FROZEN else [resource_dir().parent / "packaging" / "bin"]
+    for b in dirs:
+        if b.is_dir():
+            os.environ["PATH"] = str(b) + os.pathsep + os.environ.get("PATH", "")
 
 
 class _Tee:
