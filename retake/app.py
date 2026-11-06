@@ -323,6 +323,11 @@ class Server(ThreadingHTTPServer):
         TCPServer.server_bind(self)
         self.server_name, self.server_port = self.server_address[:2]
 
+    def handle_error(self, request, client_address):
+        # a browser drops connections all the time while seeking in a video: keep the log for real errors
+        if not isinstance(sys.exc_info()[1], ConnectionError):
+            super().handle_error(request, client_address)
+
 
 class NotFound(Exception):
     pass
