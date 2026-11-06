@@ -292,10 +292,18 @@ async function addPath(path) {
 }
 async function pickNative() {
   const api = window.pywebview && window.pywebview.api;
-  return api && api.pick_file ? await api.pick_file() : null;
+  if (!api || !api.pick_file) throw new Error("Окно выбора файла недоступно.");
+  return await api.pick_file();
 }
 $("#btnAdd").onclick = async () => {
-  if (S?.desktop) { const p = await pickNative(); if (p) addPath(p); return; }
+  if (S?.desktop) {
+    try { const p = await pickNative(); if (p) addPath(p); }
+    catch (e) {  // never a silent button: the manual path still works
+      $("#addMsg").textContent = `${e.message || e} Укажите путь к файлу вручную.`;
+      $("#pathRow").classList.add("show");
+    }
+    return;
+  }
   if (!S?.can_pick) { $("#pathRow").classList.add("show"); $("#pathInput").focus(); return; }
   try { const r = await api("/api/pick", { method: "POST", body: {} });
     if (r.unsupported) { $("#pathRow").classList.add("show"); $("#pathInput").focus(); }
@@ -307,7 +315,11 @@ $("#btnPath").onclick = () => addPath($("#pathInput").value.trim());
 $("#pathInput").onkeydown = e => { if (e.key === "Enter") addPath(e.target.value.trim()); };
 // In the app window the path of a dropped file arrives from Python (desktop.py) via retakeDropped;
 // a plain browser does not reveal it, so say so instead of silently ignoring the drop.
-window.retakeDropped = paths => { document.body.classList.remove("dragging"); paths.forEach(addPath); };
+window.retakeDropped = paths => {
+  document.body.classList.remove("dragging");
+  if (!paths.length) $("#addMsg").textContent = "Не удалось узнать путь к файлу. Нажмите «Добавить запись урока…».";
+  paths.forEach(addPath);
+};
 document.addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("dragging"); });
 document.addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("dragging"); });
 document.addEventListener("drop", e => { e.preventDefault(); document.body.classList.remove("dragging");

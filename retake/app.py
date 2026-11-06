@@ -485,6 +485,8 @@ def save_settings(b: dict) -> dict:
 def free_port(preferred: int) -> int:
     for port in (preferred, 0):
         with socket.socket() as s:
+            # as the server itself does: connections of a just closed app must not take the port away
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind(("127.0.0.1", port))
                 return s.getsockname()[1]

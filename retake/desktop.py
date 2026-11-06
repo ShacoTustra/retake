@@ -62,7 +62,9 @@ def on_loaded(window):
         def on_drop(e):
             files = (e.get("dataTransfer") or {}).get("files") or []
             paths = [f["pywebviewFullPath"] for f in files if f.get("pywebviewFullPath")]
-            if paths:
+            if files and not paths:
+                print(f"drop: no path for {[f.get('name') for f in files]}", flush=True)
+            if files:  # the page says so if there is no path: a drop that does nothing looks broken
                 window.evaluate_js(f"window.retakeDropped && window.retakeDropped({json.dumps(paths)})")
 
         window.dom.document.events.drop += DOMEventHandler(on_drop, prevent_default=True)
@@ -94,7 +96,9 @@ def main():
     import app
 
     app.DESKTOP = True
-    srv, url = app.start_server(port=0)
+    # the usual port, not a random one: WebKit keeps the page's settings per address, and with a new
+    # address on every start the editor would forget its layout, volume and where the lesson stopped
+    srv, url = app.start_server()
     print(f"Retake {runtime.VERSION}: {url}", flush=True)
 
     bridge = Bridge()
