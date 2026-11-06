@@ -23,7 +23,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from socketserver import TCPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))
 import config  # noqa: E402
@@ -129,20 +129,22 @@ class Handler(BaseHTTPRequestHandler):
                                                "style-src 'self' 'unsafe-inline'; media-src 'self'; "
                                                "img-src 'self' data:; connect-src 'self'"})
 
-    def allowed(self, url) -> bool:
+    def allowed(self, path: str, query: str) -> bool:
         host = (self.headers.get("Host") or "").lower()
         if host not in (f"127.0.0.1:{PORT}", f"localhost:{PORT}"):
             return False  # DNS rebinding
-        if url.path.startswith(("/api/", "/media/")):
-            tok = self.headers.get("X-Retake-Token") or parse_qs(url.query).get("t", [""])[0]
+        if path.startswith(("/api/", "/media/")):
+            tok = self.headers.get("X-Retake-Token") or parse_qs(query).get("t", [""])[0]
             return secrets.compare_digest(tok, TOKEN)
         return True
 
     def route(self):
         url = urlparse(self.path)
-        if not self.allowed(url):
+        # decoded once, before anything looks at it: a lesson's id comes from its file name, usually
+        # in Russian, and "/%61pi/state" must not get past the token check as something other than /api/
+        path, m = unquote(url.path), self.command
+        if not self.allowed(path, url.query):
             return self.error("forbidden", 403)
-        path, m = url.path, self.command
         try:
             if m in ("GET", "HEAD"):
                 if path == "/":

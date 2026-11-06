@@ -124,6 +124,10 @@ def text_of(el) -> str:
     return " ".join(own_text(e) for e in walk(el, 37))
 
 
+def page_text(pid: int) -> str:
+    return " ".join(own_text(e) for e in walk(windows(pid)[0]))
+
+
 def rect(el) -> tuple:
     pos, size = str(ax(el, "AXPosition")), str(ax(el, "AXSize"))
     x, y = re.search(r"x:(-?[\d.]+) y:(-?[\d.]+)", pos).groups()
@@ -292,14 +296,14 @@ def step_keys(a: App, project: projects.Project) -> None:
     key("z", CMD)
     a.wait("⌘Z brings the cut back", lambda: decision(project) in (True, None), 6)
 
-    before = text_of(windows(a.pid)[0])
+    before = page_text(a.pid)  # the time on the page moves only if the video really plays
     key("space")
     time.sleep(1.5)
-    after = text_of(windows(a.pid)[0])
+    after = page_text(a.pid)
     key("space")
     a.shot("played")
     if before == after:
-        raise RuntimeError("space: nothing changed on the page")
+        raise RuntimeError("space: the time on the page did not move")
 
 
 def step_export(a: App, project: projects.Project) -> None:
