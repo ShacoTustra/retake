@@ -53,6 +53,26 @@ class Rate(unittest.TestCase):
         self.assertEqual(render.working_rate(None, None), (Fraction(30), True))
 
 
+class Expressions(unittest.TestCase):
+    def test_every_term_counts_and_the_tree_stays_shallow(self):
+        expr = render._any_of(["x"] * 1000)
+        self.assertEqual(expr.count("x"), 1000)
+        depth = level = 0
+        for c in expr:
+            level += (c == "(") - (c == ")")
+            depth = max(depth, level)
+        self.assertEqual(level, 0)
+        self.assertLessEqual(depth, 10)  # ffmpeg 9 stops at 100
+
+    def test_one_term_stays_as_it_is(self):
+        self.assertEqual(render._any_of(["between(n,1,2)"]), "between(n,1,2)")
+
+    def test_errors_leave_out_the_filter_graph(self):
+        err = "Error while parsing expression '" + "between(n,1,2)+" * 100 + "'\nError initializing filters\nCannot allocate memory\n"
+        self.assertEqual(render._ffmpeg_error(err), "Error initializing filters\nCannot allocate memory")
+        self.assertEqual(render._ffmpeg_error("x" * 400), "x" * 300)
+
+
 class Variable(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -119,6 +139,18 @@ class Variable(unittest.TestCase):
         render.render_mp4(src, keep, info["fps"], out, "x264", 6)
         made = render.probe(out)
         self.assertAlmostEqual(made["video_duration"], 5, delta=0.05)
+
+    def test_more_clips_than_a_plain_expression_can_hold(self):
+        # with the ffmpeg in the app, a+b+c+... over 100 terms fails: "Cannot allocate memory"
+        src, out = self.dir / "many.mp4", self.dir / "many-out.mp4"
+        run("-f", "lavfi", "-i", "testsrc2=s=160x90:r=30:d=20", "-f", "lavfi", "-i", "sine=f=440:r=48000:d=20",
+            "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac", str(src))
+        keep = [(i * 2, i * 2 + 1) for i in range(250)]
+        render.render_mp4(src, keep, Fraction(30), out, "x264", 20)
+        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-count_packets", "-show_entries",
+                            "stream=nb_read_packets", "-of", "csv=p=0", str(out)],
+                           capture_output=True, text=True, check=True)
+        self.assertEqual(int(r.stdout.strip().rstrip(",")), 250)
 
     def test_a_broken_result_is_refused(self):
         with self.assertRaisesRegex(RuntimeError, "неполный"):

@@ -105,10 +105,27 @@ def render_mp4(src: Path, keep, fps: Fraction, out: Path, encoder: str, t_end: f
         return "x264"
 
 
+def _any_of(terms: list[str]) -> str:
+    """Expression that is true when any term is: a sum, as a balanced tree.
+
+    ffmpeg 9 refuses expressions over 100 levels deep (saying "Cannot allocate memory"), and a plain
+    a+b+c+... goes one level deeper per term, so a lesson with over 100 clips could not be exported."""
+    if len(terms) == 1:
+        return terms[0]
+    mid = len(terms) // 2
+    return f"({_any_of(terms[:mid])}+{_any_of(terms[mid:])})"
+
+
+def _ffmpeg_error(err: str) -> str:
+    """The end of ffmpeg's complaint, without the filter graph it quotes: that can be 30 KB of numbers."""
+    lines = [line for line in err.strip().splitlines() if len(line) < 300]
+    return "\n".join(lines[-3:]) or err.strip()[-300:]
+
+
 def _render_mp4(src: Path, keep, fps: Fraction, out: Path, encoder: str, t_end: float, progress=None):
-    sel = "+".join(f"between(n,{a},{b - 1})" for a, b in keep)
+    sel = _any_of([f"between(n,{a},{b - 1})" for a, b in keep])
     # half-open [a, b): an inclusive upper bound adds ~1 ms per splice, which drifts over 100+ cuts
-    asel = "+".join(f"gte(t,{float(a / fps) - 0.0005:.4f})*lt(t,{float(b / fps) - 0.0005:.4f})" for a, b in keep)
+    asel = _any_of([f"gte(t,{float(a / fps) - 0.0005:.4f})*lt(t,{float(b / fps) - 0.0005:.4f})" for a, b in keep])
     # tiny fades at each splice would be nicer; boundaries are already snapped to silence
     rate = f"{fps.numerator}/{fps.denominator}"
     fc = (
@@ -142,7 +159,7 @@ def _render_mp4(src: Path, keep, fps: Fraction, out: Path, encoder: str, t_end: 
                     progress(min(1.0, t / total) if total else None, "кодирование")
             err = proc.stderr.read()
             if proc.wait() != 0:
-                raise RuntimeError(f"ffmpeg: {err.strip()[-500:]}")
+                raise RuntimeError(f"ffmpeg: {_ffmpeg_error(err)}")
             _check_lengths(src, out, total)
         except BaseException:
             proc.kill()

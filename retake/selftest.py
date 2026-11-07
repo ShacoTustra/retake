@@ -143,6 +143,16 @@ def main(argv: list[str]) -> int:
         used = render.render_mp4(src, keep, info["fps"], out, render.default_encoder(), 9)  # checks the lengths too
         return f"{used}: {info['fps']} fps, {info['duration']:.1f} s -> {render.probe(out)['video_duration']:.1f} s"
 
+    def many_cuts():
+        """More clips than a plain ffmpeg expression can hold: an ordinary lesson has that many."""
+        src, out = work / "many.mp4", work / "many-cut.mp4"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=320x180:rate=30:duration=10",
+                        "-f", "lavfi", "-i", "sine=f=440:duration=10", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                        "-c:a", "aac", str(src)], check=True)
+        keep = [(i * 2, i * 2 + 1) for i in range(150)]
+        used = render.render_mp4(src, keep, render.Fraction(30), out, render.default_encoder(), 10)  # checks the lengths
+        return f"{used}: {len(keep)} clips, 10.0 s -> {render.probe(out)['video_duration']:.1f} s"
+
     def server():
         t = [time.time()]
         import app
@@ -192,6 +202,7 @@ def main(argv: list[str]) -> int:
     if "doc" in ctx:
         step("render", cut)
     step("render of a variable frame rate", uneven)
+    step("render of many cuts", many_cuts)
     step("local server", server)
     step("window library", window_lib)
 

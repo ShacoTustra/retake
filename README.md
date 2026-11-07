@@ -19,7 +19,7 @@
 со ссылкой для тестеров. Сборка с самотестом занимает ~15–20 минут.
 
 ```bash
-git tag v0.1.0-beta.2 && git push origin main --tags     # версия — в retake/runtime.py
+git tag v0.1.0-beta.3 && git push origin main --tags     # версия — в retake/runtime.py
 ```
 
 То же локально на любом Mac с Apple Silicon: `packaging/build_mac.sh` (нужен Python 3.12+).
